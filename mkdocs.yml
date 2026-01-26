@@ -45,6 +45,20 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - 政治ドメイン:
+      - 概要: politics/index.md
+  - 組織運営:
+      - 概要: organization/index.md
+      - 定款:
+          - 概要: organization/articles-of-incorporation/index.md
+          - 各項目の設定理由:
+              - 概要: organization/articles-of-incorporation/rationale.md
+              - 総則: organization/articles-of-incorporation/rationale/general-provisions.md
+              - 社員: organization/articles-of-incorporation/rationale/members.md
+              - 社員総会: organization/articles-of-incorporation/rationale/general-meeting.md
+              - 役員: organization/articles-of-incorporation/rationale/officers.md
+              - 計算: organization/articles-of-incorporation/rationale/accounting.md
+              - 附則: organization/articles-of-incorporation/rationale/supplementary-provisions.md
   - Getting Started:
       - セットアップ: getting-started/setup.md
       - 執筆ガイド: getting-started/writing-guide.md
