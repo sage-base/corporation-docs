@@ -14,4 +14,5 @@
 - [役員](rationale/officers.md) - 理事、代表理事、任期、報酬
 - [基金](rationale/fund.md) - 基金の拠出、返還手続き
 - [計算](rationale/accounting.md) - 事業年度、剰余金、決算
+- [定款の変更及び解散](rationale/dissolution.md) - 定款変更、解散、残余財産の帰属
 - [附則](rationale/supplementary-provisions.md) - 経過措置

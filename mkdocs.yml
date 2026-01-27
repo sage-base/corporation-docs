@@ -60,6 +60,7 @@ nav:
               - 役員: organization/articles-of-incorporation/rationale/officers.md
               - 基金: organization/articles-of-incorporation/rationale/fund.md
               - 計算: organization/articles-of-incorporation/rationale/accounting.md
+              - 定款の変更及び解散: organization/articles-of-incorporation/rationale/dissolution.md
               - 附則: organization/articles-of-incorporation/rationale/supplementary-provisions.md
   - Getting Started:
       - セットアップ: getting-started/setup.md
