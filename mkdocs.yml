@@ -55,9 +55,10 @@ nav:
           - 各項目の設定理由:
               - 概要: organization/articles-of-incorporation/rationale.md
               - 総則: organization/articles-of-incorporation/rationale/general-provisions.md
-              - 社員: organization/articles-of-incorporation/rationale/members.md
+              - 会員: organization/articles-of-incorporation/rationale/members.md
               - 社員総会: organization/articles-of-incorporation/rationale/general-meeting.md
               - 役員: organization/articles-of-incorporation/rationale/officers.md
+              - 基金: organization/articles-of-incorporation/rationale/fund.md
               - 計算: organization/articles-of-incorporation/rationale/accounting.md
               - 附則: organization/articles-of-incorporation/rationale/supplementary-provisions.md
   - Getting Started:
