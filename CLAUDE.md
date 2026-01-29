@@ -12,7 +12,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-このリポジトリは、チームのドキュメント管理サイトです。MkDocsを使用して静的サイトを生成しています。
+このリポジトリは、チームのドキュメント管理サイトです。
+
+### 技術スタック
+
+- **静的サイトジェネレーター**: [MkDocs](https://www.mkdocs.org/) + [Material for MkDocs](https://squidfund.github.io/mkdocs-material/) テーマ
+- **ホスティング**: GitHub Pages
+- **デプロイ**: GitHub Actions（`main` ブランチへのpush時に自動デプロイ）
+- **パッケージ管理**: [uv](https://docs.astral.sh/uv/)
+
+### デプロイの仕組み
+
+`main` ブランチにpushすると、`.github/workflows/deploy.yml` が `mkdocs gh-deploy --force` を実行し、ビルド成果物を `gh-pages` ブランチにpushしてGitHub Pagesへ公開します。手動トリガー（`workflow_dispatch`）にも対応しています。
 
 ## Related Repositories
 
