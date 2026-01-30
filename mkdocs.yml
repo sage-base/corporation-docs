@@ -34,7 +34,11 @@ plugins:
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - admonition
@@ -47,6 +51,10 @@ nav:
   - Home: index.md
   - 開発:
       - 概要: development/index.md
+      - 各種データの作り方:
+          - 概要: development/data-creation/index.md
+          - 政治家データ: development/data-creation/politician.md
+          - 政党データ: development/data-creation/political-party.md
   - 組織運営:
       - 概要: organization/index.md
       - 定款:
