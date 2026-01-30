@@ -45,8 +45,8 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - 政治ドメイン:
-      - 概要: politics/index.md
+  - 開発:
+      - 概要: development/index.md
   - 組織運営:
       - 概要: organization/index.md
       - 定款:
