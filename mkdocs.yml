@@ -64,6 +64,13 @@ nav:
           - 発言データ: development/data-creation/conversation.md
           - 政治家データ: development/data-creation/politician.md
           - 政党データ: development/data-creation/political-party.md
+      - LLM処理:
+          - 概要: development/llm-processing/index.md
+          - 議事録分割処理: development/llm-processing/minutes-division.md
+          - 会議体メンバー抽出: development/llm-processing/conference-member-extraction.md
+          - 会派メンバー抽出: development/llm-processing/parliamentary-group-member-extraction.md
+          - 政治家マッチング: development/llm-processing/politician-matching.md
+          - 役職名マッピング: development/llm-processing/role-name-mapping.md
   - 組織運営:
       - 概要: organization/index.md
       - 定款:

@@ -9,6 +9,7 @@
 ## コンテンツ
 
 - [各種データの作り方](data-creation/index.md) - Streamlit管理画面でのデータ作成手順
+- [LLM処理](llm-processing/index.md) - LLMを使った各種処理の解説
 
 <!-- 今後追加予定のコンテンツ -->
 
