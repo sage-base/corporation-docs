@@ -58,6 +58,7 @@ nav:
       - 各種データの作り方:
           - 概要: development/data-creation/index.md
           - 開催主体データ: development/data-creation/governing-body.md
+          - 選挙データ: development/data-creation/election.md
           - 会議体データ: development/data-creation/conference.md
           - 会議データ: development/data-creation/meeting.md
           - 会派（議員団）データ: development/data-creation/parliamentary-group.md

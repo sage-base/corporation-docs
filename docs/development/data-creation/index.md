@@ -7,6 +7,7 @@
 | データ | 作成方法 | 概要 |
 |--------|----------|------|
 | [開催主体データ](governing-body.md) | Streamlit管理画面 | 議会を運営する自治体を登録 |
+| [選挙データ](election.md) | Streamlit管理画面 | 地方議会の期を決定する選挙を登録 |
 | [会議体データ](conference.md) | Streamlit管理画面 | 議会・委員会などの会議組織を登録 |
 | [会議データ](meeting.md) | Streamlit管理画面 | 実際に開催された個々の会議を登録 |
 | [会派（議員団）データ](parliamentary-group.md) | Streamlit管理画面 | 議会内の会派を登録 |

@@ -24,6 +24,7 @@ Streamlit管理画面の「開催主体管理」ページから手動で作成�
 ```mermaid
 erDiagram
     GoverningBody-開催主体 ||--o{ Conference-会議体 : "配下"
+    GoverningBody-開催主体 ||--o{ Election-選挙 : "実施"
     GoverningBody-開催主体 ||--o{ ParliamentaryGroup-会派 : "所属"
 
     GoverningBody-開催主体 {
@@ -34,11 +35,20 @@ erDiagram
         string organization_type
     }
 
+    Election-選挙 {
+        int id
+        int governing_body_id
+        int term_number
+        date election_date
+        string election_type
+    }
+
     Conference-会議体 {
         int id
         string name
         int governing_body_id
-        string type
+        int election_id
+        string term
         string prefecture
         string members_introduction_url
     }
@@ -55,4 +65,5 @@ erDiagram
 | 関連テーブル | 関係 | 説明 |
 |-------------|------|------|
 | **Conference（会議体）** | 開催主体 has many 会議体 | 開催主体の配下にある議会や委員会です。1つの開催主体に複数の会議体が紐付きます |
+| **Election（選挙）** | 開催主体 has many 選挙 | 開催主体で実施された選挙です。地方議会の「第n期」は選挙によって決まります |
 | **ParliamentaryGroup（会派）** | 開催主体 has many 会派 | 開催主体に所属する会派（議員団）です。会派は特定の会議体ではなく開催主体レベルで存在します |
