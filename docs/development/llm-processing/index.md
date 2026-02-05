@@ -71,6 +71,132 @@ BAML設定ファイル（`baml_src/clients.baml`）で定義されているク�
 
 `src/infrastructure/prompts/prompts.yaml` にLangChain用のプロンプトテンプレートを集約管理しています。`PromptLoader` クラス（`src/infrastructure/external/prompt_loader.py`）で読み込みます。
 
+## データレイヤー設計（Bronze Layer / Gold Layer）
+
+LLM抽出結果の永続化には、**Bronze Layer（抽出ログ層）** と **Gold Layer（確定データ層）** の2層アーキテクチャを採用しています。一部の処理ではステージングテーブル（中間層）を経由します。
+
+### 設計の背景
+
+この設計は [ADR-0005](https://github.com/sage-base/sagebase/blob/main/docs/ADR/0005-extraction-layer-gold-layer-separation.md) で意思決定が記録されています。従来の上書き型では以下の問題がありました:
+
+- **人間の修正が消失する**: LLMの再実行で、レビュー済みデータが上書きされてしまう
+- **抽出履歴が残らない**: 精度分析やデバッグに必要な履歴が失われる
+
+これを解決するため、抽出結果をBronze Layerにイミュータブルに保存し、Gold Layer側では人間の修正を保護する仕組みを導入しています。
+
+### 全体構成
+
+```mermaid
+graph TD
+    subgraph Bronze["Bronze Layer（抽出ログ層）"]
+        EL["extraction_logs<br/>全LLM抽出結果をImmutableに保存"]
+    end
+
+    subgraph Staging["ステージングテーブル（中間層）"]
+        ECM[extracted_conference_members]
+        EPGM[extracted_parliamentary_group_members]
+    end
+
+    subgraph Gold["Gold Layer（確定データ層）"]
+        C[conversations]
+        S[speakers]
+        PA[politician_affiliations]
+        PGM[parliamentary_group_memberships]
+    end
+
+    EL -->|直接更新| C
+    EL -->|直接更新| S
+    EL -->|ステージング経由| ECM
+    EL -->|ステージング経由| EPGM
+    ECM -->|マッチング+レビュー後| PA
+    EPGM -->|マッチング+レビュー後| PGM
+```
+
+### Bronze Layer（抽出ログ層）
+
+`extraction_logs` テーブル1つで、全エンティティタイプのLLM抽出結果を管理します。
+
+| 特徴 | 説明 |
+|------|------|
+| 追記専用（Immutable） | 作成後は更新・削除されない |
+| 全結果保存 | 成功・失敗問わず全てのLLM抽出結果を記録 |
+| メタデータ付与 | パイプラインバージョン、LLMモデル名、トークン数、処理時間 |
+
+`entity_type` ENUMで対象を識別します:
+
+| entity_type | 対象 |
+|------------|------|
+| `statement` | 発言 |
+| `politician` | 政治家 |
+| `speaker` | 話者 |
+| `conference_member` | 会議体メンバー |
+| `parliamentary_group_member` | 議員団メンバー |
+
+**活用用途:**
+
+- パイプラインバージョン別の精度比較
+- 時系列での精度推移分析
+- 新しいLLMパイプラインのA/Bテスト
+- デバッグ・監査・トレーサビリティ
+
+### ステージングテーブル（中間層）
+
+会議体メンバー・議員団メンバーなど、マッチングと人間のレビューが必要な処理では、ステージングテーブルを中間層として使用します。
+
+| テーブル | 用途 |
+|--------|------|
+| `extracted_conference_members` | 会議体メンバーの中間データ |
+| `extracted_parliamentary_group_members` | 議員団メンバーの中間データ |
+
+ステージングテーブルでは `matching_status` でマッチング状態を管理します:
+
+| ステータス | 条件 | 意味 |
+|-----------|------|------|
+| `pending` | 初期状態 | マッチング未実施 |
+| `matched` | 信頼度 >= 0.7 | マッチング成功 |
+| `needs_review` | 0.5 <= 信頼度 < 0.7 | 人間のレビューが必要 |
+| `no_match` | 信頼度 < 0.5 | マッチなし |
+
+### Gold Layer（確定データ層）
+
+アプリケーションが参照する最終的な正解データです。
+
+| テーブル | 内容 |
+|--------|------|
+| `conversations` | 議事録の発言 |
+| `speakers` | 議事録の話者 |
+| `politician_affiliations` | 政治家の会議体所属 |
+| `parliamentary_group_memberships` | 議員団メンバーシップ |
+
+### 手動検証による保護（VerifiableEntity）
+
+全Goldエンティティおよびステージングエンティティは `VerifiableEntity` プロトコルを実装し、人間の修正をAI再抽出から保護します。
+
+| フィールド | 説明 |
+|-----------|------|
+| `is_manually_verified` | 人間が検証済みかどうか |
+| `latest_extraction_log_id` | 最新の抽出ログ（Bronze Layer）への参照 |
+
+`is_manually_verified = true` のエンティティは、AI再抽出で上書きされません。更新処理は `UpdateEntityFromExtractionUseCase` 基底クラスで統一的に実装されています。
+
+### データフローのパターン
+
+**パターン1: 直接更新（発言・話者）**
+
+```
+LLM抽出 → ExtractionLog保存（Bronze） → Gold Entity更新（is_manually_verified=falseの場合のみ）
+```
+
+**パターン2: ステージング経由（会議体メンバー・議員団メンバー）**
+
+```
+LLM抽出 → ExtractionLog保存（Bronze）
+        → ステージングテーブル保存（pending）
+        → マッチング処理（matched/needs_review/no_match）
+        → 人間のレビュー（Streamlit UI）
+        → Gold Layer作成（matchedのレコードのみ）
+```
+
 ## LLM処理の一覧
 
 | 処理 | 概要 | フレームワーク | 詳細 |

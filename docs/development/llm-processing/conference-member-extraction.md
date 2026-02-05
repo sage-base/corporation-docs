@@ -50,6 +50,118 @@ graph TD
 | party_name | string? | 所属政党名 |
 | additional_info | string? | その他の情報 |
 
+## 処理フローと生成されるオブジェクト
+
+会議体メンバー抽出は、LLM抽出 → 検証・重複除去 → DB保存の3段階で処理され、各段階で異なるオブジェクトが生成されます。
+
+```mermaid
+graph TD
+    A[HTML] --> B[BAML抽出<br/>BAMLMemberExtractor]
+    B --> C["ExtractedMemberDTO（リスト）"]
+    C --> D[LangGraphエージェント<br/>検証・重複除去]
+    D --> E[ConferenceMemberExtractionResult<br/>TypedDict]
+    E --> F[DB保存<br/>extract_and_save_members]
+    F --> G["ExtractedConferenceMember<br/>（DBエンティティ）"]
+    F --> H["ExtractionLog<br/>（抽出ログ）"]
+```
+
+### 1. BAML抽出（LLM呼び出し）
+
+`BAMLMemberExtractor.extract_members()` がHTMLを受け取り、BAML経由でLLMを呼び出し、以下のDTOのリストを返します。
+
+**ExtractedMemberDTO**（`src/application/dtos/conference_member_extraction_dto.py`）:
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| name | str | 議員名 |
+| role | str? | 役職（議長、副議長、委員長など） |
+| party_name | str? | 所属政党名 |
+| additional_info | str? | その他の情報 |
+
+### 2. LangGraphエージェント（検証・重複除去）
+
+`ConferenceMemberExtractionAgent.extract_members()` が3ステップ（抽出 → 検証 → 重複除去）を経て、以下を返します。
+
+**ConferenceMemberExtractionResult**（TypedDict版、同ファイル）:
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| members | list[ExtractedMemberDTO] | 最終的なメンバーリスト |
+| success | bool | 成功フラグ |
+| validation_errors | list[str] | 検証エラー |
+| error_message | str? | エラーメッセージ |
+
+### 3. DB保存（最終成果物）
+
+`ConferenceMemberExtractor.extract_and_save_members()` が各メンバーをドメインエンティティに変換してDBに保存します。
+
+**ExtractedConferenceMember**（`src/domain/entities/extracted_conference_member.py`）:
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| conference_id | int | 会議体ID |
+| extracted_name | str | 抽出された議員名 |
+| source_url | str | 抽出元URL |
+| extracted_role | str? | 役職 |
+| extracted_party_name | str? | 所属政党名 |
+| extracted_at | datetime | 抽出日時 |
+| matched_politician_id | int? | マッチした政治家ID（後続処理で設定） |
+| matching_confidence | float? | マッチング信頼度 |
+| matching_status | str | `pending` / `matched` / `needs_review`（デフォルト: `pending`） |
+| matched_at | datetime? | マッチング日時 |
+| additional_data | str? | その他情報 |
+| is_manually_verified | bool | 手動検証済みフラグ（デフォルト: `false`） |
+| latest_extraction_log_id | int? | 抽出ログID |
+
+最終的にDBに永続化されるのは `ExtractedConferenceMember` です。これは `matching_status: "pending"` のステージングデータとしてまず保存され、後続のマッチング処理で `matched_politician_id` が設定される設計です。
+
+さらに、抽出ログ（`ExtractionLog`）にもLLM抽出結果の履歴が記録されます。
+
+### 関連エンティティとのリレーション
+
+```mermaid
+erDiagram
+    Conference-会議体 ||--o{ ExtractedConferenceMember-抽出メンバー : "抽出元"
+    Politician-政治家 ||--o{ ExtractedConferenceMember-抽出メンバー : "マッチング先"
+    ExtractionLog-抽出ログ ||--o{ ExtractedConferenceMember-抽出メンバー : "抽出履歴"
+
+    ExtractedConferenceMember-抽出メンバー {
+        int conference_id FK
+        string extracted_name
+        string source_url
+        string extracted_role
+        string extracted_party_name
+        datetime extracted_at
+        int matched_politician_id FK
+        float matching_confidence
+        string matching_status
+        bool is_manually_verified
+        int latest_extraction_log_id FK
+    }
+
+    Conference-会議体 {
+        int id PK
+        string name
+        int governing_body_id FK
+        string members_introduction_url
+    }
+
+    Politician-政治家 {
+        int id PK
+        string name
+        string prefecture
+        int political_party_id FK
+    }
+
+    ExtractionLog-抽出ログ {
+        int id PK
+        string entity_type
+        int entity_id
+        json extracted_data
+        float confidence_score
+    }
+```
+
 ## 処理の詳細
 
 ### 抽出ルール
