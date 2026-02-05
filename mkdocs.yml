@@ -53,6 +53,11 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - 政治ドメイン:
+      - 概要: political-domain/index.md
+      - 国会の仕組み: political-domain/national-diet.md
+      - 地方議会の仕組み: political-domain/local-assembly.md
+      - 首長選挙: political-domain/executive-elections.md
   - 開発:
       - 概要: development/index.md
       - 各種データの作り方:
