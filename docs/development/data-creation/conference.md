@@ -28,7 +28,7 @@ erDiagram
     GoverningBody-開催主体 ||--o{ Conference-会議体 : "配下"
     Election-選挙 ||--o{ Conference-会議体 : "決定"
     Conference-会議体 ||--o{ Meeting-会議 : "開催"
-    Conference-会議体 ||--o{ PoliticianAffiliation-会議体所属 : "所属"
+    Conference-会議体 ||--o{ ConferenceMember-会議体メンバー : "所属"
     Conference-会議体 ||--o{ Proposal-議案 : "審議"
     Conference-会議体 ||--o{ ProposalSubmitter-議案提出者 : "提出元"
     Conference-会議体 ||--o{ ExtractedConferenceMember-抽出済み会議体メンバー : "抽出"
@@ -64,10 +64,15 @@ erDiagram
         string url
     }
 
-    PoliticianAffiliation-会議体所属 {
+    ConferenceMember-会議体メンバー {
         int id
         int politician_id
         int conference_id
+        date start_date
+        date end_date
+        string role
+        bool is_manually_verified
+        int source_extracted_member_id
     }
 
     Proposal-議案 {
@@ -97,7 +102,7 @@ erDiagram
 | **GoverningBody（開催主体）** | 会議体 has one 開催主体 | この会議体を運営する自治体です |
 | **Election（選挙）** | 会議体 has one 選挙（任意） | この会議体がどの選挙で決まった期かを示します。選挙と紐付けることで「第n期」の根拠が明確になります |
 | **Meeting（会議）** | 会議体 has many 会議 | この会議体で実際に開催された個々の会議です |
-| **PoliticianAffiliation（会議体所属）** | 会議体 has many 会議体所属 | 政治家がこの会議体にいつからいつまで所属しているかを期間付きで記録します |
+| **ConferenceMember（会議体メンバー）** | 会議体 has many 会議体メンバー | 政治家がこの会議体にいつからいつまで所属しているかを期間付きで記録します。`source_extracted_member_id`で抽出元との紐付けを保持します |
 | **Proposal（議案）** | 会議体 has many 議案 | この会議体で審議される議案です |
 | **ProposalSubmitter（議案提出者）** | 会議体 has many 議案提出者 | 議案の提出元が委員会や会議体自体である場合に参照されます |
 | **ExtractedConferenceMember（抽出済み会議体メンバー）** | 会議体 has many 抽出済み会議体メンバー | 外部Webページから抽出された会議体メンバー情報です。政治家との自動マッチングに使用されます |

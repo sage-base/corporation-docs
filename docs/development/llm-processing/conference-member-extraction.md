@@ -105,15 +105,10 @@ graph TD
 | extracted_role | str? | 役職 |
 | extracted_party_name | str? | 所属政党名 |
 | extracted_at | datetime | 抽出日時 |
-| matched_politician_id | int? | マッチした政治家ID（後続処理で設定） |
-| matching_confidence | float? | マッチング信頼度 |
-| matching_status | str | `pending` / `matched` / `needs_review`（デフォルト: `pending`） |
-| matched_at | datetime? | マッチング日時 |
 | additional_data | str? | その他情報 |
-| is_manually_verified | bool | 手動検証済みフラグ（デフォルト: `false`） |
 | latest_extraction_log_id | int? | 抽出ログID |
 
-最終的にDBに永続化されるのは `ExtractedConferenceMember` です。これは `matching_status: "pending"` のステージングデータとしてまず保存され、後続のマッチング処理で `matched_politician_id` が設定される設計です。
+最終的にDBに永続化されるのは `ExtractedConferenceMember` です。これはBronze Layer（抽出ログ層）のエンティティとして生データを保持します。政治家との紐付けはGold Layer（`ConferenceMember`）で管理されます。
 
 さらに、抽出ログ（`ExtractionLog`）にもLLM抽出結果の履歴が記録されます。
 
@@ -122,8 +117,8 @@ graph TD
 ```mermaid
 erDiagram
     Conference-会議体 ||--o{ ExtractedConferenceMember-抽出メンバー : "抽出元"
-    Politician-政治家 ||--o{ ExtractedConferenceMember-抽出メンバー : "マッチング先"
     ExtractionLog-抽出ログ ||--o{ ExtractedConferenceMember-抽出メンバー : "抽出履歴"
+    ExtractedConferenceMember-抽出メンバー ||--o| ConferenceMember-会議体メンバー : "紐付け"
 
     ExtractedConferenceMember-抽出メンバー {
         int conference_id FK
@@ -132,11 +127,19 @@ erDiagram
         string extracted_role
         string extracted_party_name
         datetime extracted_at
-        int matched_politician_id FK
-        float matching_confidence
-        string matching_status
-        bool is_manually_verified
+        string additional_data
         int latest_extraction_log_id FK
+    }
+
+    ConferenceMember-会議体メンバー {
+        int id PK
+        int politician_id FK
+        int conference_id FK
+        date start_date
+        date end_date
+        string role
+        bool is_manually_verified
+        int source_extracted_member_id FK
     }
 
     Conference-会議体 {
@@ -144,13 +147,6 @@ erDiagram
         string name
         int governing_body_id FK
         string members_introduction_url
-    }
-
-    Politician-政治家 {
-        int id PK
-        string name
-        string prefecture
-        int political_party_id FK
     }
 
     ExtractionLog-抽出ログ {
@@ -161,6 +157,8 @@ erDiagram
         float confidence_score
     }
 ```
+
+Bronze Layer（`ExtractedConferenceMember`）と Gold Layer（`ConferenceMember`）の責務分離により、抽出データと検証済みの所属データが明確に分かれています。`ConferenceMember.source_extracted_member_id` により、どの抽出メンバーから作成されたかのトレーサビリティが確保されています。
 
 ## 処理の詳細
 

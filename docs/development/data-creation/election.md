@@ -24,6 +24,8 @@ Streamlit管理画面の「選挙管理」ページから手動で作成しま�
 erDiagram
     GoverningBody-開催主体 ||--o{ Election-選挙 : "実施"
     Election-選挙 ||--o{ Conference-会議体 : "決定"
+    Election-選挙 ||--o{ ElectionMember-選挙結果メンバー : "結果"
+    Politician-政治家 ||--o{ ElectionMember-選挙結果メンバー : "参加"
 
     GoverningBody-開催主体 {
         int id
@@ -41,6 +43,15 @@ erDiagram
         string election_type
     }
 
+    ElectionMember-選挙結果メンバー {
+        int id
+        int election_id
+        int politician_id
+        string result
+        int votes
+        int rank
+    }
+
     Conference-会議体 {
         int id
         string name
@@ -50,6 +61,12 @@ erDiagram
         string prefecture
         string members_introduction_url
     }
+
+    Politician-政治家 {
+        int id
+        string name
+        string prefecture
+    }
 ```
 
 ### リレーションの説明
@@ -58,6 +75,31 @@ erDiagram
 |-------------|------|------|
 | **GoverningBody（開催主体）** | 選挙 has one 開催主体 | この選挙を実施した自治体です |
 | **Conference（会議体）** | 選挙 has many 会議体 | この選挙によって決まった期に属する会議体です |
+| **ElectionMember（選挙結果メンバー）** | 選挙 has many 選挙結果メンバー | この選挙に参加した政治家と結果（当選/落選等）を記録します |
+
+## 選挙結果メンバー（ElectionMember）
+
+選挙に参加した政治家とその結果を記録するテーブルです。
+
+### 入力プロパティ
+
+| フィールド | 必須 | 説明 |
+|------------|------|------|
+| 選挙 | はい | 紐付ける選挙を選択 |
+| 政治家 | はい | 参加した政治家を選択 |
+| 結果 | はい | 当選、落選、次点、繰上当選、無投票当選のいずれか |
+| 得票数 | いいえ | 獲得した票数 |
+| 順位 | いいえ | 得票順位 |
+
+### 結果の種類
+
+| 結果 | 説明 |
+|------|------|
+| 当選 | 選挙で当選した |
+| 落選 | 選挙で落選した |
+| 次点 | 当選には届かなかったが次点だった |
+| 繰上当選 | 欠員により繰り上げで当選した |
+| 無投票当選 | 立候補者数が定数以下のため無投票で当選した |
 
 ## 用途
 

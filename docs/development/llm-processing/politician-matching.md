@@ -92,7 +92,7 @@ LLMは以下の基準でマッチングを判定します:
 graph TD
     A[発言者情報] --> B[ReActエージェント]
     B --> C[search_politician_candidates<br/>候補検索・スコアリング]
-    B --> D[verify_politician_affiliation<br/>所属情報検証]
+    B --> D[verify_conference_membership<br/>所属情報検証]
     B --> E[match_politician_with_baml<br/>BAMLマッチング]
     C --> B
     D --> B
@@ -103,7 +103,7 @@ graph TD
 | ツール名 | 処理内容 | LLM使用 |
 |---------|---------|--------|
 | `search_politician_candidates` | 政治家候補を検索しスコアリング | なし（ルールベース） |
-| `verify_politician_affiliation` | 政治家の所属情報をDBから検証 | なし（DB参照） |
+| `verify_conference_membership` | 政治家の会議体メンバー情報をDBから検証 | なし（DB参照） |
 | `match_politician_with_baml` | BAMLで最終マッチング判定 | あり |
 
 ## 実装ファイル
