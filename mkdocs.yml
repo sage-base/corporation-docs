@@ -66,6 +66,7 @@ nav:
           - 選挙データ: development/data-creation/election.md
           - 会議体データ: development/data-creation/conference.md
           - 会議データ: development/data-creation/meeting.md
+          - 議案データ: development/data-creation/proposal.md
           - 会派（議員団）データ: development/data-creation/parliamentary-group.md
           - 発言データ: development/data-creation/conversation.md
           - 政治家データ: development/data-creation/politician.md
