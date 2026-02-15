@@ -1,0 +1,29 @@
+[data-md-color-scheme="default"] .md-tag[href*="手動作成"] {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+[data-md-color-scheme="slate"] .md-tag[href*="手動作成"] {
+  background-color: #388e3c;
+  color: #fff;
+}
+
+[data-md-color-scheme="default"] .md-tag[href*="シードデータ作成済み"] {
+  background-color: #2196f3;
+  color: #fff;
+}
+
+[data-md-color-scheme="slate"] .md-tag[href*="シードデータ作成済み"] {
+  background-color: #1976d2;
+  color: #fff;
+}
+
+[data-md-color-scheme="default"] .md-tag[href*="自動生成"] {
+  background-color: #ff9800;
+  color: #fff;
+}
+
+[data-md-color-scheme="slate"] .md-tag[href*="自動生成"] {
+  background-color: #f57c00;
+  color: #fff;
+}
