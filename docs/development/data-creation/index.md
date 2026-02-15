@@ -2,6 +2,85 @@
 
 このセクションでは、Sagebaseの管理画面（Streamlit）を使った各種データの作成手順を説明します。
 
+## 衆議院データの全体像
+
+衆議院の議員個人の投票データ（ProposalJudge）を作成するためには、複数のデータソースを組み合わせる必要があります。以下の図は、データの依存関係と現在の進捗を示しています。
+
+!!! info "現在の進捗"
+    **④ 個人投票データ（ProposalJudge）** の仕上げ作業中です。
+
+```mermaid
+flowchart TB
+    subgraph Gold["④ 個人投票データ（ProposalJudge）"]
+        G1["「山田太郎議員は消費税法案に賛成した」"]
+    end
+
+    subgraph Silver["中間データ"]
+        S1["② 議案+会派賛否<br/>7,108件の議案<br/>「自民党: 賛成、立憲: 反対」"]
+        S2["③ 会派メンバーシップ<br/>誰がどの会派にいつ所属していたか<br/>465名分"]
+    end
+
+    subgraph Bronze["外部データソース"]
+        B1["① 議案の基本情報<br/>法案名、状態、提出日、採決日<br/><i>smartnews-smri（学術データ）</i>"]
+        B2["① 選挙結果<br/>第45-50回（2009-2024）<br/>小選挙区+比例<br/><i>総務省XLS</i>"]
+    end
+
+    B1 --> S1
+    B2 --> S2
+    S1 --> G1
+    S2 --> G1
+
+    style Gold fill:#fff3cd,stroke:#856404
+    style Silver fill:#d1ecf1,stroke:#0c5460
+    style Bronze fill:#d4edda,stroke:#155724
+```
+
+### 生成ロジック
+
+**④ 個人投票データ**は、以下のロジックで生成されます：
+
+```
+会派の賛否 × 所属議員 = 個人の賛否
+```
+
+つまり、ある議案に対して「自民党が賛成」という情報があり、「山田太郎議員がその時点で自民党に所属していた」という情報があれば、「山田太郎議員はその議案に賛成した」と推定できます。
+
+### 各データの詳細
+
+| 層 | データ | 件数 | データソース | 詳細ページ |
+|----|--------|------|--------------|------------|
+| Bronze | 議案の基本情報 | - | [smartnews-smri](https://github.com/smartnews-smri/house-of-representatives) | [議案データ](proposal.md) |
+| Bronze | 選挙結果 | 第45-50回 | 総務省XLS/PDF | [選挙データ](election.md) |
+| Silver | 議案+会派賛否 | 7,108件 | smartnews-smriから生成 | [議案データ](proposal.md) |
+| Silver | 会派メンバーシップ | 465名 | 選挙結果から自動紐付け | [会派データ](parliamentary-group.md) |
+| Gold | 個人投票データ | - | ②③から展開 | [議案データ](proposal.md) |
+
+### データ作成スクリプト一覧
+
+| スクリプト | 用途 |
+|-----------|------|
+| `import_smartnews_smri.py` | 議案+会派賛否のインポート |
+| `import_soumu_election.py` | 小選挙区候補者のインポート |
+| `import_soumu_proportional.py` | 比例代表当選者のインポート |
+| `link_parliamentary_groups.py` | 会派メンバーシップ自動紐付け |
+| `match_proposal_group_judges.py` | 会派賛否の正規化 |
+
+### 個人投票展開の詳細
+
+Streamlit管理画面の「議案管理」→「個人投票展開」タブで、会派賛否から個人投票を展開できます。
+
+#### 展開時の投票日特定
+
+投票日は以下の優先順位で特定されます：
+
+1. `proposal_deliberations` → `meeting.date`
+2. `proposal.meeting_id` → `meeting.date`
+3. `proposal.voted_date`
+
+#### 記名投票による上書き
+
+「記名投票上書き」タブで、実際の記名投票結果で個人投票を上書きできます。この際、会派方針との不一致（造反）が自動検出されます。
+
 ## 対象データ
 
 | データ | 作成方法 | 概要 |

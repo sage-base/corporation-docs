@@ -100,6 +100,8 @@ erDiagram
         string category
         string deliberation_result
         string external_id
+        date submitted_date
+        date voted_date
     }
 
     ExtractedProposalJudge-会派賛否 {
@@ -152,6 +154,133 @@ erDiagram
 
 重複が検出された場合はスキップされ、新規データのみが登録されます。
 
+## 日付カラム
+
+議案テーブルには以下の日付カラムがあります：
+
+| カラム | 説明 |
+|--------|------|
+| submitted_date | 議案の提出日 |
+| voted_date | 議案の採決日 |
+
+これらの日付は、個人投票展開時に「投票日時点での会派所属」を特定するために使用されます。
+
+## 議案と会議の多対多紐付け（ProposalDeliberation）
+
+1つの議案が複数の会議で審議されるケースに対応するため、`ProposalDeliberation` テーブルで議案と会議の関係を管理します。
+
+### データ構造
+
+| フィールド | 必須 | 説明 |
+|------------|------|------|
+| proposal_id | はい | 議案ID |
+| conference_id | はい | 会議体ID |
+| meeting_id | いいえ | 会議ID |
+| stage | いいえ | 審議段階（付託、採決など） |
+
+### 投票日の特定順序
+
+個人投票を展開する際、投票日は以下の優先順位で特定されます：
+
+1. `proposal_deliberations` → `meeting.date`（会議日付）
+2. `proposal.meeting_id` → `meeting.date`
+3. `proposal.voted_date`
+
+## 会派賛否マッピング生成
+
+Bronze層の `ExtractedProposalJudge`（抽出された会派賛否）を、Gold層の `ProposalParliamentaryGroupJudge`（正規化された会派賛否）に変換します。
+
+```bash
+# 標準実行
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/match_proposal_group_judges.py
+
+# ドライラン
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/match_proposal_group_judges.py --dry-run
+```
+
+### 処理フロー
+
+```mermaid
+flowchart TD
+    A[ExtractedProposalJudge<br/>抽出された会派名] --> B[会派名マッチング]
+    B --> C{マッチ成功?}
+    C -->|Yes| D[ProposalParliamentaryGroupJudge<br/>正規化された会派賛否]
+    C -->|No| E[エラーレポート出力]
+```
+
+## 個人投票データ（ProposalJudge）
+
+議員個人の議案への賛否を記録します。会派賛否から展開するか、記名投票で直接入力できます。
+
+### データ構造
+
+| フィールド | 説明 |
+|------------|------|
+| proposal_id | 議案ID |
+| politician_id | 政治家ID |
+| approve | 賛否（賛成/反対/棄権/欠席） |
+| source_type | 生成元（GROUP_EXPANSION/ROLL_CALL） |
+| source_group_judge_id | 展開元の会派賛否ID |
+| is_defection | 造反フラグ |
+
+### 生成元種別（source_type）
+
+| 値 | 説明 |
+|----|------|
+| GROUP_EXPANSION | 会派賛否から展開された投票 |
+| ROLL_CALL | 記名投票から直接入力された投票 |
+
+### 個人投票展開UI
+
+Streamlit管理画面の「議案管理」ページ → 「個人投票展開」タブで操作できます。
+
+#### 展開フロー
+
+```mermaid
+flowchart TD
+    A[議案を選択] --> B[会派賛否を選択]
+    B --> C[プレビュー確認]
+    C --> D{既存投票の扱い}
+    D -->|上書きしない| E[既存投票をスキップ]
+    D -->|上書きする| F[既存投票を置換]
+    E --> G[個人投票レコード作成]
+    F --> G
+```
+
+#### 展開ロジック
+
+```
+会派の賛否 × 投票日時点での所属議員 = 個人の賛否
+```
+
+投票日時点での会派所属を確認し、その時点で会派に所属していた議員に対して個人投票レコードを作成します。
+
+### 記名投票上書きUI
+
+「記名投票上書き」タブで、実際の記名投票結果で個人投票データを上書きできます。
+
+#### CSVフォーマット
+
+```csv
+政治家ID,賛否
+501,賛成
+502,反対
+503,棄権
+```
+
+#### 造反検出
+
+上書き処理時に、会派賛否と個人投票の不一致（造反）を自動検出します。
+
+| 項目 | 説明 |
+|------|------|
+| politician_name | 政治家名 |
+| individual_vote | 個人投票 |
+| group_judgment | 会派方針 |
+| parliamentary_group_name | 所属会派名 |
+
 ## 用途
 
 議案データは以下の目的で使用されます：
@@ -160,3 +289,4 @@ erDiagram
 - 会派ごとの賛否傾向の分析
 - 政治家や政党の政策スタンスの把握
 - 法案成立までのプロセスの可視化
+- **個人投票データの生成と造反検出**
