@@ -14,7 +14,9 @@ Streamlit管理画面の「議員団管理」ページから手動で作成し�
 
 日本の地方議会では、会派（議員団）と政党は必ずしも1対1ではありません。例えば「自民党・無所属の会」のように複数政党の議員が合同で会派を組むケースがあります。
 
-ただし、国会の会派など1対1で対応するケースでは、`political_party_id` で政党と紐付けることができます。これにより、政党所属議員の会派自動紐付けが可能になります。
+会派と政党の対応関係は `parliamentary_group_parties` 中間テーブルで管理されます（詳細は[政党データの作り方](political-party.md)を参照）。`is_primary` フラグで主要政党を識別します。
+
+従来の `political_party_id` による直接紐付けも引き続きサポートしていますが、複数政党が合同する会派の場合は中間テーブルを使用してください。
 
 ## 入力プロパティ
 
@@ -33,9 +35,11 @@ Streamlit管理画面の「議員団管理」ページから手動で作成し�
 erDiagram
     GoverningBody-開催主体 ||--o{ ParliamentaryGroup-会派 : "所属"
     ParliamentaryGroup-会派 ||--o{ ParliamentaryGroupMembership-会派所属 : "所属メンバー"
+    ParliamentaryGroup-会派 ||--o{ ParliamentaryGroupParty-会派政党対応 : "対応"
     ParliamentaryGroup-会派 ||--o{ ExtractedParliamentaryGroupMember-抽出済み会派メンバー : "抽出"
     ParliamentaryGroup-会派 ||--o{ ProposalSubmitter-議案提出者 : "提出元"
     ParliamentaryGroup-会派 ||--o{ ProposalParliamentaryGroupJudge-会派別議案賛否 : "投票"
+    PoliticalParty-政党 ||--o{ ParliamentaryGroupParty-会派政党対応 : "対応"
 
     GoverningBody-開催主体 {
         int id
@@ -51,6 +55,18 @@ erDiagram
         string url
         string description
         bool is_active
+    }
+
+    ParliamentaryGroupParty-会派政党対応 {
+        int id
+        int parliamentary_group_id
+        int political_party_id
+        bool is_primary
+    }
+
+    PoliticalParty-政党 {
+        int id
+        string name
     }
 
     ParliamentaryGroupMembership-会派所属 {
@@ -91,7 +107,8 @@ erDiagram
 | **ExtractedParliamentaryGroupMember（抽出済み会派メンバー）** | 会派 has many 抽出済み会派メンバー | 外部Webページから抽出された会派メンバー情報です。政治家との自動マッチングに使用されます |
 | **ProposalSubmitter（議案提出者）** | 会派 has many 議案提出者 | この会派が提出元となっている議案です(議案は会派として提出するケースがあります。) |
 | **ProposalParliamentaryGroupJudge（会派別議案賛否）** | 会派 has many 会派別議案賛否 | 会派単位での議案に対する賛否を記録します(議案は会派単位で賛否を表明するケースがあります。) |
-| **PoliticalParty（政党）** | 会派 has one 政党（任意） | 会派と政党の紐付けです。会派自動紐付けに使用されます |
+| **ParliamentaryGroupParty（会派政党対応）** | 会派 has many 会派政党対応 | 会派と政党の多対多の対応関係です。`is_primary` で主要政党を識別します。SEEDファイル: `seed_parliamentary_group_parties_generated.sql` |
+| **PoliticalParty（政党）** | 会派 has one 政党（任意、レガシー） | 単一政党との直接紐付けです。複数政党が合同する会派では `ParliamentaryGroupParty` を使用してください |
 
 ## 会派メンバーシップ（ParliamentaryGroupMembership）
 
@@ -122,14 +139,35 @@ erDiagram
 ### 実行方法
 
 ```bash
-# 単回実行
+# 単回実行（特定の選挙回次）
 docker compose -f docker/docker-compose.yml exec sagebase \
     uv run python scripts/link_parliamentary_groups.py --election 50
 
-# 一括実行（第45-50回）
+# 一括実行（全選挙）
 docker compose -f docker/docker-compose.yml exec sagebase \
     uv run python scripts/link_parliamentary_groups_bulk.py
+
+# 院を指定して一括実行
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/link_parliamentary_groups_bulk.py --chamber 衆議院
+
+# 特定回次を指定して一括実行
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/link_parliamentary_groups_bulk.py --term 45 46 47
+
+# ドライラン
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/link_parliamentary_groups_bulk.py --dry-run
 ```
+
+### バルク紐付けのコマンドライン引数
+
+| 引数 | 説明 | デフォルト |
+|------|------|-----------|
+| `--chamber` | 対象院（all/衆議院/参議院） | all |
+| `--term` | 対象回次（複数指定可） | 全回次 |
+| `--dry-run` | DB書き込みなし | - |
+| `--skip-seed` | SEED生成をスキップ | - |
 
 ### 紐付けロジック
 
@@ -186,3 +224,73 @@ WHERE NOT EXISTS (SELECT 1 FROM parliamentary_group_memberships
 
 !!! note "冪等性"
     `WHERE NOT EXISTS` を使用しているため、複数回実行しても重複レコードは作成されません。
+
+## パイプライン品質検証
+
+`verify_parliamentary_group_pipeline.py` で会派紐付けパイプラインの品質を検証できます。
+
+```bash
+# ベースライン測定のみ
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/verify_parliamentary_group_pipeline.py --mode baseline
+
+# 検証のみ（要: 保存済みベースライン）
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/verify_parliamentary_group_pipeline.py --mode verify
+
+# 測定→実行→検証の一括実行
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/verify_parliamentary_group_pipeline.py --mode full
+
+# 院を指定
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/verify_parliamentary_group_pipeline.py --mode full --chamber 衆議院
+```
+
+### コマンドライン引数
+
+| 引数 | 説明 | デフォルト |
+|------|------|-----------|
+| `--mode` | baseline/verify/full | - |
+| `--chamber` | 衆議院/参議院/all | all |
+| `--dry-run` | DB書き込みなし（mode=fullのみ） | - |
+
+### 成功基準
+
+| 基準 | 条件 |
+|------|------|
+| 衆議院カバー率 | 全選挙に少なくとも1件のメンバーシップが存在 |
+| 参議院カバー率 | 全選挙に少なくとも1件のメンバーシップが存在 |
+| スキップ率 | 政党未設定を除くスキップが10%以下 |
+
+出力ファイル:
+
+- `tmp/pipeline_baseline.json` — ベースライン計測値
+- `tmp/pipeline_verification_results.json` — 詳細検証結果
+
+## 会派-政党マッピング調査
+
+`investigate_kaiha_mapping.py` で、SmartNews SMRIデータから会派名を抽出し、政党との対応関係を調査できます。
+
+```bash
+docker compose -f docker/docker-compose.yml exec sagebase \
+    uv run python scripts/investigate_kaiha_mapping.py
+```
+
+### 出力ファイル
+
+| ファイル | 内容 |
+|---------|------|
+| `tmp/kaiha_shuugiin_by_session.csv` | 衆議院の会派名一覧（会期別） |
+| `tmp/kaiha_sangiin_current.csv` | 参議院の現在の会派名一覧 |
+| `tmp/kaiha_mapping_proposal.json` | マッピング提案（信頼度付き） |
+| `tmp/kaiha_unmapped_groups.csv` | 未マッピングの会派一覧 |
+
+マッピングの信頼度:
+
+| 信頼度 | 意味 |
+|--------|------|
+| `existing` | 既存の対応関係あり |
+| `high` | 名前から高確度でマッチ |
+| `medium` | 部分一致 |
+| `unmapped` | 対応する政党が不明 |

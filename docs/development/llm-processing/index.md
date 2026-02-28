@@ -100,7 +100,7 @@ graph TD
     subgraph Gold["Gold Layer（確定データ層）"]
         C[conversations]
         S[speakers]
-        PA[politician_affiliations]
+        PA[conference_members]
         PGM[parliamentary_group_memberships]
     end
 
@@ -165,7 +165,7 @@ graph TD
 |--------|------|
 | `conversations` | 議事録の発言 |
 | `speakers` | 議事録の話者 |
-| `politician_affiliations` | 政治家の会議体所属 |
+| `conference_members` | 政治家の会議体所属（旧テーブル名: `politician_affiliations`） |
 | `parliamentary_group_memberships` | 議員団メンバーシップ |
 
 ### 手動検証による保護（VerifiableEntity）
