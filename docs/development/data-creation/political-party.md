@@ -65,14 +65,5 @@ erDiagram
 | **Politician（政治家）** | 政党 has many 政治家 | この政党に現在所属している政治家です |
 | **ParliamentaryGroupParty（会派政党対応）** | 政党 has many 会派政党対応 | この政党が所属する会派との対応関係です。`is_primary` フラグで主要政党かどうかを示します |
 
-## ParliamentaryGroupParty（会派-政党対応テーブル）
-
-会派と政党の多対多の対応関係を管理する中間テーブルです。日本の国会では、複数の政党が合同で会派を組むケースがあるため（例: 「自由民主党・無所属の会」）、この中間テーブルで関係を管理します。
-
-| フィールド | 説明 |
-|------------|------|
-| `parliamentary_group_id` | 会派ID |
-| `political_party_id` | 政党ID |
-| `is_primary` | この政党が会派の主要政党かどうか |
-
-SEEDファイル: `database/seed_parliamentary_group_parties_generated.sql`
+!!! tip "会派-政党対応テーブル"
+    ParliamentaryGroupParty（会派と政党の多対多対応）の詳細は、[会派-政党対応](relations/parliamentary-group-party.md)を参照してください。

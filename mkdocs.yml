@@ -60,7 +60,7 @@ nav:
       - 首長選挙: political-domain/executive-elections.md
   - 開発:
       - 概要: development/index.md
-      - 各種データの作り方:
+      - 各種マスターデータの作り方:
           - 概要: development/data-creation/index.md
           - 開催主体データ: development/data-creation/governing-body.md
           - 選挙データ: development/data-creation/election.md
@@ -71,6 +71,14 @@ nav:
           - 発言データ: development/data-creation/conversation.md
           - 政治家データ: development/data-creation/politician.md
           - 政党データ: development/data-creation/political-party.md
+      - リレーションの作り方:
+          - 概要: development/data-creation/relations/index.md
+          - 選挙結果メンバー: development/data-creation/relations/election-member.md
+          - 会議体メンバー: development/data-creation/relations/conference-member.md
+          - 会派メンバーシップ: development/data-creation/relations/parliamentary-group-membership.md
+          - 会派-政党対応: development/data-creation/relations/parliamentary-group-party.md
+          - 発言者-政治家紐付け: development/data-creation/relations/speaker-politician.md
+          - 個人投票展開: development/data-creation/relations/proposal-judge.md
       - LLM処理:
           - 概要: development/llm-processing/index.md
           - 議事録分割処理: development/llm-processing/minutes-division.md

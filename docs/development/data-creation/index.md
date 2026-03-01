@@ -1,6 +1,8 @@
-# 各種データの作り方
+# 各種マスターデータの作り方
 
-このセクションでは、Sagebaseの管理画面（Streamlit）およびデータインポートスクリプトを使った各種データの作成手順を説明します。
+このセクションでは、Sagebaseの管理画面（Streamlit）およびデータインポートスクリプトを使った各種マスターデータの作成手順を説明します。
+
+マスターデータ間を接続するリレーション（中間テーブル）の生成方法は、[リレーションの作り方](relations/index.md)を参照してください。
 
 ## 国会データの全体像
 
@@ -71,7 +73,7 @@ flowchart TB
 | Gold | 個人投票データ | - | ②③から展開 | [議案データ](proposal.md) |
 | Gold | 発言-政治家紐付け | - | Speaker→Politicianマッチング | [発言データ](conversation.md) |
 
-### データ作成スクリプト一覧
+### マスターデータ作成スクリプト一覧
 
 #### 選挙データインポート
 
@@ -84,50 +86,22 @@ flowchart TB
 | `import_soumu_sangiin_proportional.py` | 参議院比例代表当選者のインポート | 第21-27回 |
 | `import_sangiin_election.py` | 参議院議員データのインポート（SmartNews SMRI） | - |
 
-#### 会議体メンバー・会派紐付け
-
-| スクリプト | 用途 |
-|-----------|------|
-| `populate_conference_members.py` | 当選者→会議体メンバー（ConferenceMember）の自動変換 |
-| `link_parliamentary_groups.py` | 会派メンバーシップ単回紐付け |
-| `link_parliamentary_groups_bulk.py` | 会派メンバーシップ一括紐付け + SEED生成 |
-| `verify_parliamentary_group_pipeline.py` | 会派紐付けパイプラインの品質検証 |
-| `investigate_kaiha_mapping.py` | 会派-政党マッピング調査 |
-
-#### 発言データ・Speakerマッチング
+#### 発言データインポート
 
 | スクリプト/コマンド | 用途 |
 |-------------------|------|
 | `sagebase kokkai import` | 国会APIから発言データを一括インポート |
 | `sagebase kokkai survey` | 国会APIの事前調査（会期・発言数の確認） |
 | `sagebase kokkai stats` | Speaker-Politicianマッチング統計の表示 |
-| `sagebase classify-speakers` | Speakerの is_politician 分類 |
-| `sagebase backfill-role-name-mappings` | 役職→人名マッピングの前処理 |
-| `sagebase kokkai bulk-match-speakers` | バルクSpeakerマッチング（ルールベース + BAML） |
-| `run_pass1_speaker_matching.py` | 4ステップSpeakerマッチングパイプライン |
 
 #### その他
 
 | スクリプト | 用途 |
 |-----------|------|
 | `import_smartnews_smri.py` | 議案+会派賛否のインポート |
-| `match_proposal_group_judges.py` | 会派賛否の正規化 |
 
-### 個人投票展開の詳細
-
-Streamlit管理画面の「議案管理」→「個人投票展開」タブで、会派賛否から個人投票を展開できます。
-
-#### 展開時の投票日特定
-
-投票日は以下の優先順位で特定されます：
-
-1. `proposal_deliberations` → `meeting.date`
-2. `proposal.meeting_id` → `meeting.date`
-3. `proposal.voted_date`
-
-#### 記名投票による上書き
-
-「記名投票上書き」タブで、実際の記名投票結果で個人投票を上書きできます。この際、会派方針との不一致（造反）が自動検出されます。
+!!! tip "リレーション生成スクリプト"
+    会議体メンバー・会派紐付け・Speakerマッチング・個人投票展開などのリレーション生成スクリプトについては、[リレーションの作り方](relations/index.md)を参照してください。
 
 ## 対象データ
 
