@@ -84,6 +84,7 @@ flowchart TB
 | `import_wikipedia_election.py` | Wikipedia衆議院選挙データのインポート | 第1-44回 |
 | `import_soumu_sangiin_election.py` | 参議院選挙区候補者のインポート | 第21-27回 |
 | `import_soumu_sangiin_proportional.py` | 参議院比例代表当選者のインポート | 第21-27回 |
+| `import_wikipedia_sangiin_election.py` | Wikipedia参議院選挙データのインポート | 第1-27回 |
 | `import_sangiin_election.py` | 参議院議員データのインポート（SmartNews SMRI） | - |
 
 #### 発言データインポート

@@ -12,7 +12,7 @@ tags:
 
 ## インポーター一覧
 
-国会の選挙データには6種類のインポーターがあります。
+国会の選挙データには7種類のインポーターがあります。
 
 | インポーター | データソース | 対象 | 選挙回次 | election_type |
 |-------------|-------------|------|----------|---------------|
@@ -21,6 +21,7 @@ tags:
 | `import_wikipedia_election.py` | Wikipedia API | 衆議院（歴史的データ） | 第1-44回 | 衆議院議員総選挙 |
 | `import_soumu_sangiin_election.py` | 総務省XLS | 参議院選挙区 | 第21-27回 | 参議院議員通常選挙 |
 | `import_soumu_sangiin_proportional.py` | 総務省XLS | 参議院比例代表 | 第21-27回 | 参議院議員通常選挙 |
+| `import_wikipedia_sangiin_election.py` | Wikipedia API | 参議院（歴史的データ） | 第1-27回 | 参議院議員通常選挙 |
 | `import_sangiin_election.py` | SmartNews SMRI JSON | 参議院議員 | - | 参議院議員通常選挙 |
 
 !!! note "election_type UNIQUE制約"
@@ -281,6 +282,43 @@ Wikipedia APIからInfoboxテンプレートを取得し、当選者情報をパ
     docker compose -f docker/docker-compose.yml exec sagebase \
         uv run python scripts/import_soumu_sangiin_proportional.py --election 25 --dry-run
     ```
+
+## Wikipedia参議院選挙データインポーター
+
+第1回（1947年）〜第27回（2025年）の参議院議員通常選挙の当選者データをWikipediaからインポートします。4パターンのWikitext解析（テンプレート形式・wikitable形式）に対応し、合区・特定枠・補欠当選も処理します。
+
+??? example "コマンド例と引数"
+
+    ```bash
+    # 特定の選挙回次をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_wikipedia_sangiin_election.py --election 25
+
+    # 全選挙（第1回〜第27回）をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_wikipedia_sangiin_election.py --all
+
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_wikipedia_sangiin_election.py --election 25 --dry-run
+    ```
+
+    | 引数 | 説明 |
+    |------|------|
+    | `--election {1-27}` | 特定の選挙回次を指定 |
+    | `--all` | 全選挙を一括インポート（第1回〜第27回） |
+    | `--dry-run` | ドライラン（データベース書き込みなし） |
+
+### データソース
+
+Wikipedia APIからWikitextを取得し、以下の4パターンで当選者情報をパースします：
+
+| パターン | テンプレート/形式 | 対象 |
+|---------|-----------------|------|
+| テンプレート形式（選挙区） | `{{参院選挙区当選者}}` | 選挙区当選者 |
+| テンプレート形式（比例） | `{{参院比例当選者}}` | 比例代表当選者 |
+| wikitable形式（選挙区/全国区） | `{| class="wikitable"` | 選挙区・全国区当選者 |
+| wikitable形式（比例区） | `{| class="wikitable"` | 比例区当選者 |
 
 ## SmartNews SMRI 参議院議員データインポーター
 
