@@ -15,7 +15,9 @@
 | ParliamentaryGroupMembership | ParliamentaryGroup → Politician | スクリプト自動紐付け | [会派メンバーシップ](parliamentary-group-membership.md) |
 | ParliamentaryGroupParty | ParliamentaryGroup → PoliticalParty | スクリプト調査 + SEED | [会派-政党対応](parliamentary-group-party.md) |
 | Speaker → Politician | Speaker → Politician | マッチングパイプライン | [発言者-政治家紐付け](speaker-politician.md) |
+| ExtractedProposalJudge | Proposal → ParliamentaryGroup | インポート時自動生成 | [個人投票展開](proposal-judge.md) |
 | ProposalJudge | Proposal → Politician | 会派賛否展開 + 記名投票 | [個人投票展開](proposal-judge.md) |
+| ProposalDeliberation | Proposal → Conference / Meeting | 管理画面 | [議案審議紐付け](proposal-deliberation.md) |
 
 ## 全体ER図（中間テーブル中心）
 
@@ -37,6 +39,10 @@ erDiagram
 
     Proposal-議案 ||--o{ ProposalJudge-個人投票 : "対象"
     Politician-政治家 ||--o{ ProposalJudge-個人投票 : "投票"
+
+    Proposal-議案 ||--o{ ExtractedProposalJudge-会派賛否 : "賛否"
+    Proposal-議案 ||--o{ ProposalDeliberation-議案審議 : "審議"
+    Conference-会議体 ||--o{ ProposalDeliberation-議案審議 : "審議先"
 
     Politician-政治家 {
         int id
@@ -107,6 +113,19 @@ erDiagram
         int politician_id
         string approve
     }
+
+    ExtractedProposalJudge-会派賛否 {
+        int proposal_id
+        string extracted_parliamentary_group_name
+        string extracted_judgment
+    }
+
+    ProposalDeliberation-議案審議 {
+        int proposal_id
+        int conference_id
+        int meeting_id
+        string stage
+    }
 ```
 
 ## 外部キーの設定パターン
@@ -130,6 +149,8 @@ Sagebaseでは、エンティティ間の関連を2つのパターンで管理�
 - **ParliamentaryGroupMembership**: ParliamentaryGroup ↔ Politician（期間・役割付き）
 - **ParliamentaryGroupParty**: ParliamentaryGroup ↔ PoliticalParty（主要政党フラグ付き）
 - **ProposalJudge**: Proposal ↔ Politician（賛否・造反フラグ付き）
+- **ExtractedProposalJudge**: Proposal ↔ ParliamentaryGroup（会派賛否・マッチング状態付き）
+- **ProposalDeliberation**: Proposal ↔ Conference / Meeting（審議段階付き）
 
 ## リレーション生成スクリプト一覧
 

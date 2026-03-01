@@ -74,8 +74,6 @@ tags:
 erDiagram
     Conference-会議体 ||--o{ Proposal-議案 : "審議"
     GoverningBody-開催主体 ||--o{ Proposal-議案 : "提出先"
-    Proposal-議案 ||--o{ ExtractedProposalJudge-会派賛否 : "賛否"
-    ParliamentaryGroup-会派 ||--o{ ExtractedProposalJudge-会派賛否 : "判断"
 
     GoverningBody-開催主体 {
         int id
@@ -103,20 +101,6 @@ erDiagram
         date submitted_date
         date voted_date
     }
-
-    ExtractedProposalJudge-会派賛否 {
-        int id
-        int proposal_id
-        string extracted_parliamentary_group_name
-        string extracted_judgment
-        string source_url
-        string matching_status
-    }
-
-    ParliamentaryGroup-会派 {
-        int id
-        string name
-    }
 ```
 
 ### リレーションの説明
@@ -125,25 +109,9 @@ erDiagram
 |-------------|------|------|
 | **GoverningBody（開催主体）** | 議案 has one 開催主体 | この議案が提出された議会（国会など） |
 | **Conference（会議体）** | 議案 has one 会議体（任意） | 議案を審議した会議体 |
-| **ExtractedProposalJudge（会派賛否）** | 議案 has many 会派賛否 | 各会派の賛成/反対情報 |
 
-## 会派賛否データ（ExtractedProposalJudge）
-
-議案ごとに各会派の賛否情報を記録します。
-
-### データ構造
-
-| フィールド | 説明 |
-|------------|------|
-| proposal_id | 議案ID（外部キー） |
-| extracted_parliamentary_group_name | 会派名（抽出されたまま） |
-| extracted_judgment | "賛成" または "反対" |
-| source_url | データソースURL |
-| matching_status | マッチング状態（pending/matched/unmatched） |
-
-### マッチング処理
-
-抽出された会派名は、システムに登録済みの会派（ParliamentaryGroup）との自動マッチング対象となります。マッチングが完了すると`matching_status`が`matched`に更新され、正式な会派IDと紐付けられます。
+!!! tip "会派賛否データ（ExtractedProposalJudge）"
+    議案ごとの会派賛否データの構造・マッチング処理については、[個人投票展開](relations/proposal-judge.md)を参照してください。
 
 ## 重複チェック
 
@@ -165,30 +133,9 @@ erDiagram
 
 これらの日付は、個人投票展開時に「投票日時点での会派所属」を特定するために使用されます。
 
-## 議案と会議の多対多紐付け（ProposalDeliberation）
-
-1つの議案が複数の会議で審議されるケースに対応するため、`ProposalDeliberation` テーブルで議案と会議の関係を管理します。
-
-### データ構造
-
-| フィールド | 必須 | 説明 |
-|------------|------|------|
-| proposal_id | はい | 議案ID |
-| conference_id | はい | 会議体ID |
-| meeting_id | いいえ | 会議ID |
-| stage | いいえ | 審議段階（付託、採決など） |
-
-### 投票日の特定順序
-
-個人投票を展開する際、投票日は以下の優先順位で特定されます：
-
-1. `proposal_deliberations` → `meeting.date`（会議日付）
-2. `proposal.meeting_id` → `meeting.date`
-3. `proposal.voted_date`
-
-!!! tip "会派賛否マッピング・個人投票展開"
-    - 会派賛否マッピング生成（`match_proposal_group_judges.py`）の詳細は[個人投票展開](relations/proposal-judge.md)を参照してください。
-    - 個人投票データ（ProposalJudge）の構造・展開UI・記名投票上書き・造反検出の詳細は[個人投票展開](relations/proposal-judge.md)を参照してください。
+!!! tip "リレーション"
+    - **議案審議紐付け**（ProposalDeliberation）: 議案と会議の多対多紐付け・投票日特定順序の詳細は[議案審議紐付け](relations/proposal-deliberation.md)を参照してください。
+    - **会派賛否マッピング・個人投票展開**: 会派賛否マッピング生成・個人投票データの構造・展開UI・記名投票上書き・造反検出の詳細は[個人投票展開](relations/proposal-judge.md)を参照してください。
 
 ## 用途
 

@@ -79,6 +79,7 @@ nav:
           - 会派-政党対応: development/data-creation/relations/parliamentary-group-party.md
           - 発言者-政治家紐付け: development/data-creation/relations/speaker-politician.md
           - 個人投票展開: development/data-creation/relations/proposal-judge.md
+          - 議案審議紐付け: development/data-creation/relations/proposal-deliberation.md
       - LLM処理:
           - 概要: development/llm-processing/index.md
           - 議事録分割処理: development/llm-processing/minutes-division.md

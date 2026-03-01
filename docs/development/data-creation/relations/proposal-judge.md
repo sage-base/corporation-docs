@@ -47,9 +47,23 @@ erDiagram
     }
 ```
 
+## 会派賛否データ（ExtractedProposalJudge）
+
+議案ごとに各会派の賛否情報を記録するBronze層のテーブルです。SmartNews-SMRIデータのインポート時に自動生成されます。
+
+| フィールド | 説明 |
+|------------|------|
+| proposal_id | 議案ID（外部キー） |
+| extracted_parliamentary_group_name | 会派名（抽出されたまま） |
+| extracted_judgment | "賛成" または "反対" |
+| source_url | データソースURL |
+| matching_status | マッチング状態（pending/matched/unmatched） |
+
+抽出された会派名は、システムに登録済みの会派（ParliamentaryGroup）との自動マッチング対象となります。マッチングが完了すると`matching_status`が`matched`に更新され、正式な会派IDと紐付けられます。
+
 ## 会派賛否マッピング生成
 
-Bronze層の `ExtractedProposalJudge`（抽出された会派賛否）を、Gold層の `ProposalParliamentaryGroupJudge`（正規化された会派賛否）に変換します。
+上記の `ExtractedProposalJudge`（Bronze層）を、`ProposalParliamentaryGroupJudge`（Gold層・正規化された会派賛否）に変換します。
 
 ??? example "コマンド例と処理フロー"
 
