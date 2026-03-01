@@ -17,6 +17,8 @@ erDiagram
         bool is_politician
         bool is_manually_verified
         string name_yomi
+        float matching_confidence
+        string matching_reason
     }
 
     Politician-政治家 {
@@ -40,7 +42,9 @@ erDiagram
 flowchart TD
     A[① classify-speakers<br/>非政治家の分類] --> B[② backfill-role-name-mappings<br/>役職→人名の前処理]
     B --> C[③ bulk-match-speakers<br/>ルールベース + BAMLマッチング]
+    B --> C2[③' bulk-match-speakers --wide-match<br/>広域マッチング（1947-2007年対応）]
     C --> D[④ run_pass1_speaker_matching.py<br/>4ステップパイプライン]
+    C2 --> D
     D --> E[⑤ 手動検証<br/>Streamlit管理画面]
 ```
 
@@ -101,17 +105,25 @@ flowchart TD
 
 ## ③ バルクSpeakerマッチング（bulk-match-speakers）
 
-期間・院を指定して、対象会議のSpeakerを一括マッチングします。
+期間・院を指定して、対象会議のSpeakerを一括マッチングします。通常モードと広域マッチングモードの2種類があります。
 
 ??? example "コマンド例と引数"
 
     ```bash
-    # 衆議院の特定期間をマッチング
+    # 衆議院の特定期間をマッチング（通常モード）
     docker compose -f docker/docker-compose.yml exec sagebase \
         sagebase kokkai bulk-match-speakers \
         --chamber 衆議院 \
         --date-from 2020-01-01 \
         --date-to 2024-12-31
+
+    # 広域マッチングモード（ConferenceMemberデータがない1947-2007年向け）
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai bulk-match-speakers \
+        --chamber 衆議院 \
+        --date-from 1947-01-01 \
+        --date-to 2007-12-31 \
+        --wide-match
 
     # 信頼度閾値を変更
     docker compose -f docker/docker-compose.yml exec sagebase \
@@ -136,23 +148,38 @@ flowchart TD
     | `--date-from` | はい | 開始日（YYYY-MM-DD） | - |
     | `--date-to` | はい | 終了日（YYYY-MM-DD） | - |
     | `--confidence-threshold` | いいえ | マッチング信頼度閾値 | 0.8 |
+    | `--wide-match` | いいえ | 広域マッチングモード（ElectionMemberベース） | 通常モード |
     | `--dry-run` | いいえ | 対象会議一覧のみ表示 | - |
+
+### マッチングモード
+
+| モード | 候補リスト構築方法 | 対象期間 |
+|--------|------------------|---------|
+| **通常モード**（デフォルト） | ConferenceMemberから取得 | ConferenceMemberデータがある期間 |
+| **広域マッチング**（`--wide-match`） | ElectionMember（選挙当選者）から取得 | 全期間（特に1947-2007年） |
+
+広域マッチングでは、参議院の半数改選に対応するため直近2回の選挙当選者を合算して候補リストを構築します。
 
 ### マッチング戦略
 
-マッチングは2段階で行われます：
+マッチングは以下の順序で行われます：
 
-1. **ルールベース（高速パス）**: 名前正規化→類似度計算。信頼度 ≥ 0.8 で即時マッチ
-2. **BAMLフォールバック（LLM）**: ルールベースで確定できない場合、Gemini 2 Flashで候補を評価。旧字体の揺れ（斉藤 vs 齊藤）なども考慮
+1. **名前正規化**: NFKC正規化、旧字体→新字体変換（約70文字: 櫻→桜、齋→斎 等）を適用
+2. **ルールベースマッチ**: 正規化後の名前で類似度計算。完全一致、漢字姓一致（ひらがな混じり名対応）など複数ステップ
+3. **同姓同名判定**: 候補に同姓が複数存在する場合、`skip_reason=HOMONYM` として記録しスキップ
+4. **BAMLフォールバック（LLM）**: ルールベースで確定できない場合、Gemini 2 Flashで候補を評価
 
 ??? note "信頼度スコアリング"
 
-    | 信頼度 | 条件 |
-    |--------|------|
-    | 0.9+ | 氏名完全一致 + 政党一致 |
-    | 0.7-0.9 | 氏名一致、政党不明/部分一致 |
-    | 0.5-0.7 | 名前のバリエーションだが政党一致 |
-    | 0.5未満 | マッチなし |
+    マッチ結果には信頼度が付与され、Speakerの `matching_confidence` / `matching_reason` に記録されます。
+
+    | 信頼度 | 条件 | 処理 |
+    |--------|------|------|
+    | 0.9+ | 氏名完全一致 + 政党一致 | 自動マッチ |
+    | 0.85 | 漢字姓一致（ひらがな混じり名対応） | 自動マッチ |
+    | 0.7-0.9 | 氏名一致、政党不明/部分一致 | 手動検証待ち |
+    | 0.5-0.7 | 名前のバリエーションだが政党一致 | 保留 |
+    | 0.5未満 | マッチなし | スキップ |
 
 ## ④ 4ステップパイプライン（run_pass1_speaker_matching.py）
 

@@ -44,7 +44,7 @@ erDiagram
 ```
 
 !!! note "テーブル名について"
-    ConferenceMemberエンティティのデータベーステーブル名は `politician_affiliations` です（`conference_members` へのリネームが予定されています）。
+    ConferenceMemberエンティティのデータベーステーブル名は `conference_members` です（PR #1285 で `politician_affiliations` からリネーム済み）。
 
 ## 処理フロー
 
@@ -57,7 +57,7 @@ flowchart TD
     E --> F[対応するConferenceを特定]
     F --> G[ConferenceMemberレコード作成]
     G --> H{--skip-seed?}
-    H -->|No| I[SEEDファイル生成<br/>politician_affiliations_generated.sql]
+    H -->|No| I[SEEDファイル生成<br/>conference_members_generated.sql]
     H -->|Yes| J[完了]
     I --> J
 ```
@@ -98,4 +98,4 @@ flowchart TD
 
 ## SEED生成
 
-実行後、`database/seed_politician_affiliations_generated.sql` にSEEDファイルが生成されます。`WHERE NOT EXISTS` を使用した冪等なINSERT文で、複数回実行しても重複レコードは作成されません。
+実行後、`database/seed_conference_members_generated.sql` にSEEDファイルが生成されます。`WHERE NOT EXISTS` を使用した冪等なINSERT文で、複数回実行しても重複レコードは作成されません。

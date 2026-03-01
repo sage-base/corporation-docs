@@ -137,6 +137,8 @@ tags:
 | matched_by_user_id | マッチングを実施したユーザーID |
 | is_manually_verified | 手動検証済みフラグ（trueの場合、AIによる上書きから保護） |
 | name_yomi | 読み仮名 |
+| matching_confidence | マッチングの信頼度スコア（0.0〜1.0） |
+| matching_reason | マッチング手法の記録（EXACT_MATCH, KANJI_SURNAME, BAML等） |
 
 ## 他オブジェクトとのリレーション
 
