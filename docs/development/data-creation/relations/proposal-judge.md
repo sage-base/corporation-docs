@@ -51,25 +51,25 @@ erDiagram
 
 Bronze層の `ExtractedProposalJudge`（抽出された会派賛否）を、Gold層の `ProposalParliamentaryGroupJudge`（正規化された会派賛否）に変換します。
 
-```bash
-# 標準実行
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/match_proposal_group_judges.py
+??? example "コマンド例と処理フロー"
 
-# ドライラン
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/match_proposal_group_judges.py --dry-run
-```
+    ```bash
+    # 標準実行
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/match_proposal_group_judges.py
 
-### 処理フロー
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/match_proposal_group_judges.py --dry-run
+    ```
 
-```mermaid
-flowchart TD
-    A[ExtractedProposalJudge<br/>抽出された会派名] --> B[会派名マッチング]
-    B --> C{マッチ成功?}
-    C -->|Yes| D[ProposalParliamentaryGroupJudge<br/>正規化された会派賛否]
-    C -->|No| E[エラーレポート出力]
-```
+    ```mermaid
+    flowchart TD
+        A[ExtractedProposalJudge<br/>抽出された会派名] --> B[会派名マッチング]
+        B --> C{マッチ成功?}
+        C -->|Yes| D[ProposalParliamentaryGroupJudge<br/>正規化された会派賛否]
+        C -->|No| E[エラーレポート出力]
+    ```
 
 ## データ構造
 
@@ -126,22 +126,24 @@ flowchart TD
 
 「記名投票上書き」タブで、実際の記名投票結果で個人投票データを上書きできます。
 
-### CSVフォーマット
+??? note "CSVフォーマットと造反検出"
 
-```csv
-政治家ID,賛否
-501,賛成
-502,反対
-503,棄権
-```
+    **CSVフォーマット:**
 
-### 造反検出
+    ```csv
+    政治家ID,賛否
+    501,賛成
+    502,反対
+    503,棄権
+    ```
 
-上書き処理時に、会派賛否と個人投票の不一致（造反）を自動検出します。
+    **造反検出:**
 
-| 項目 | 説明 |
-|------|------|
-| politician_name | 政治家名 |
-| individual_vote | 個人投票 |
-| group_judgment | 会派方針 |
-| parliamentary_group_name | 所属会派名 |
+    上書き処理時に、会派賛否と個人投票の不一致（造反）を自動検出します。
+
+    | 項目 | 説明 |
+    |------|------|
+    | politician_name | 政治家名 |
+    | individual_vote | 個人投票 |
+    | group_judgment | 会派方針 |
+    | parliamentary_group_name | 所属会派名 |

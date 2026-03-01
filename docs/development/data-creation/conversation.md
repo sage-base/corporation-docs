@@ -17,86 +17,88 @@ tags:
 
 インポート前に、対象となる会期の会議数・発言数を確認できます。
 
-```bash
-# 全会期の会議数・発言数を調査
-docker compose -f docker/docker-compose.yml exec sagebase \
-    sagebase kokkai survey
+??? example "コマンド例と引数"
 
-# 特定の会期範囲を調査
-docker compose -f docker/docker-compose.yml exec sagebase \
-    sagebase kokkai survey --session-from 200 --session-to 210
+    ```bash
+    # 全会期の会議数・発言数を調査
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai survey
 
-# 院を指定して調査
-docker compose -f docker/docker-compose.yml exec sagebase \
-    sagebase kokkai survey --name-of-house 衆議院
-```
+    # 特定の会期範囲を調査
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai survey --session-from 200 --session-to 210
 
-#### コマンドライン引数
+    # 院を指定して調査
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai survey --name-of-house 衆議院
+    ```
 
-| 引数 | 説明 | デフォルト |
-|------|------|-----------|
-| `--session-from` | 開始会期番号 | 1 |
-| `--session-to` | 終了会期番号 | 自動検出 |
-| `--name-of-house` | 院名（衆議院/参議院） | 全院 |
-| `--sleep` | API呼び出し間隔（秒） | 1.0 |
+    | 引数 | 説明 | デフォルト |
+    |------|------|-----------|
+    | `--session-from` | 開始会期番号 | 1 |
+    | `--session-to` | 終了会期番号 | 自動検出 |
+    | `--name-of-house` | 院名（衆議院/参議院） | 全院 |
+    | `--sleep` | API呼び出し間隔（秒） | 1.0 |
 
 ### インポート実行
 
-```bash
-# 特定の会期範囲をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    sagebase kokkai import --session-from 200 --session-to 210
+??? example "コマンド例と引数"
 
-# 院を指定してインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    sagebase kokkai import --session-from 200 --name-of-house 参議院
+    ```bash
+    # 特定の会期範囲をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai import --session-from 200 --session-to 210
 
-# ドライラン（対象会議一覧を表示するのみ）
-docker compose -f docker/docker-compose.yml exec sagebase \
-    sagebase kokkai import --session-from 200 --session-to 210 --dry-run
-```
+    # 院を指定してインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai import --session-from 200 --name-of-house 参議院
 
-#### コマンドライン引数
+    # ドライラン（対象会議一覧を表示するのみ）
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai import --session-from 200 --session-to 210 --dry-run
+    ```
 
-| 引数 | 説明 | デフォルト |
-|------|------|-----------|
-| `--session-from` | 開始会期番号 | - |
-| `--session-to` | 終了会期番号 | - |
-| `--name-of-house` | 院名（衆議院/参議院） | 全院 |
-| `--name-of-meeting` | 会議名 | 全会議 |
-| `--sleep` | API呼び出し間隔（秒） | 2.0 |
-| `--dry-run` | 対象会議一覧のみ表示 | - |
+    | 引数 | 説明 | デフォルト |
+    |------|------|-----------|
+    | `--session-from` | 開始会期番号 | - |
+    | `--session-to` | 終了会期番号 | - |
+    | `--name-of-house` | 院名（衆議院/参議院） | 全院 |
+    | `--name-of-meeting` | 会議名 | 全会議 |
+    | `--sleep` | API呼び出し間隔（秒） | 2.0 |
+    | `--dry-run` | 対象会議一覧のみ表示 | - |
 
-#### 出力サマリ
+??? info "出力サマリ"
 
-| 項目 | 説明 |
-|------|------|
-| total_meetings_found | 発見した会議数 |
-| total_meetings_processed | 処理した会議数 |
-| total_meetings_skipped | スキップした会議数 |
-| total_speeches_imported | インポートした発言数 |
-| total_speakers_created | 新規作成したSpeaker数 |
+    | 項目 | 説明 |
+    |------|------|
+    | total_meetings_found | 発見した会議数 |
+    | total_meetings_processed | 処理した会議数 |
+    | total_meetings_skipped | スキップした会議数 |
+    | total_speeches_imported | インポートした発言数 |
+    | total_speakers_created | 新規作成したSpeaker数 |
 
 ### 統計確認
 
 インポート後のSpeaker-Politicianマッチング状況を確認できます。
 
-```bash
-docker compose -f docker/docker-compose.yml exec sagebase \
-    sagebase kokkai stats
+??? example "コマンド例と出力内容"
 
-# 未マッチSpeaker一覧の表示件数を変更
-docker compose -f docker/docker-compose.yml exec sagebase \
-    sagebase kokkai stats --limit 50
-```
+    ```bash
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai stats
 
-出力内容:
+    # 未マッチSpeaker一覧の表示件数を変更
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        sagebase kokkai stats --limit 50
+    ```
 
-- `total_speakers`: 全Speaker数
-- `linked_speakers`: Politician紐付け済み数
-- `unlinked_speakers`: 未紐付け数
-- `match_rate`: マッチ率
-- 未紐付けSpeaker一覧（political_party_name付き）
+    出力内容:
+
+    - `total_speakers`: 全Speaker数
+    - `linked_speakers`: Politician紐付け済み数
+    - `unlinked_speakers`: 未紐付け数
+    - `match_rate`: マッチ率
+    - 未紐付けSpeaker一覧（political_party_name付き）
 
 ## 議事録解析パイプライン（従来方式）
 

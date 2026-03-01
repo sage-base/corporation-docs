@@ -64,37 +64,37 @@ flowchart TD
 
 ## 実行方法
 
-```bash
-# 衆議院の全選挙を処理
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/populate_conference_members.py --chamber 衆議院
+??? example "コマンド例と引数"
 
-# 特定の回次のみ処理
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/populate_conference_members.py --chamber 衆議院 --term 49 50
+    ```bash
+    # 衆議院の全選挙を処理
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/populate_conference_members.py --chamber 衆議院
 
-# 参議院を処理
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/populate_conference_members.py --chamber 参議院
+    # 特定の回次のみ処理
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/populate_conference_members.py --chamber 衆議院 --term 49 50
 
-# ドライラン
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/populate_conference_members.py --chamber 衆議院 --dry-run
+    # 参議院を処理
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/populate_conference_members.py --chamber 参議院
 
-# SEED生成をスキップ
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/populate_conference_members.py --chamber 衆議院 --skip-seed
-```
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/populate_conference_members.py --chamber 衆議院 --dry-run
 
-## コマンドライン引数
+    # SEED生成をスキップ
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/populate_conference_members.py --chamber 衆議院 --skip-seed
+    ```
 
-| 引数 | 必須 | 説明 | デフォルト |
-|------|------|------|-----------|
-| `--chamber` | いいえ | 対象院（衆議院/参議院） | 衆議院 |
-| `--term` | いいえ | 対象回次（複数指定可） | 全回次 |
-| `--conference-name` | いいえ | 対象会議体名 | 院に基づき自動決定 |
-| `--dry-run` | いいえ | DB書き込みなし | - |
-| `--skip-seed` | いいえ | SEED生成をスキップ | - |
+    | 引数 | 必須 | 説明 | デフォルト |
+    |------|------|------|-----------|
+    | `--chamber` | いいえ | 対象院（衆議院/参議院） | 衆議院 |
+    | `--term` | いいえ | 対象回次（複数指定可） | 全回次 |
+    | `--conference-name` | いいえ | 対象会議体名 | 院に基づき自動決定 |
+    | `--dry-run` | いいえ | DB書き込みなし | - |
+    | `--skip-seed` | いいえ | SEED生成をスキップ | - |
 
 ## SEED生成
 

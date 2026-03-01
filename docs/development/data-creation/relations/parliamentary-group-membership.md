@@ -57,36 +57,36 @@ erDiagram
 
 ### 実行方法
 
-```bash
-# 単回実行（特定の選挙回次）
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/link_parliamentary_groups.py --election 50
+??? example "コマンド例と引数"
 
-# 一括実行（全選挙）
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/link_parliamentary_groups_bulk.py
+    ```bash
+    # 単回実行（特定の選挙回次）
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/link_parliamentary_groups.py --election 50
 
-# 院を指定して一括実行
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/link_parliamentary_groups_bulk.py --chamber 衆議院
+    # 一括実行（全選挙）
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/link_parliamentary_groups_bulk.py
 
-# 特定回次を指定して一括実行
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/link_parliamentary_groups_bulk.py --term 45 46 47
+    # 院を指定して一括実行
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/link_parliamentary_groups_bulk.py --chamber 衆議院
 
-# ドライラン
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/link_parliamentary_groups_bulk.py --dry-run
-```
+    # 特定回次を指定して一括実行
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/link_parliamentary_groups_bulk.py --term 45 46 47
 
-### バルク紐付けのコマンドライン引数
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/link_parliamentary_groups_bulk.py --dry-run
+    ```
 
-| 引数 | 説明 | デフォルト |
-|------|------|-----------|
-| `--chamber` | 対象院（all/衆議院/参議院） | all |
-| `--term` | 対象回次（複数指定可） | 全回次 |
-| `--dry-run` | DB書き込みなし | - |
-| `--skip-seed` | SEED生成をスキップ | - |
+    | 引数 | 説明 | デフォルト |
+    |------|------|-----------|
+    | `--chamber` | 対象院（all/衆議院/参議院） | all |
+    | `--term` | 対象回次（複数指定可） | 全回次 |
+    | `--dry-run` | DB書き込みなし | - |
+    | `--skip-seed` | SEED生成をスキップ | - |
 
 ### 紐付けロジック
 
@@ -101,88 +101,85 @@ flowchart TD
     E -->|複数件| H[スキップ<br/>skipped_multiple_groups]
 ```
 
-### 出力結果
+??? info "出力結果"
 
-| 項目 | 説明 |
-|------|------|
-| total_elected | 当選者総数 |
-| linked_count | 新規紐付け数 |
-| already_existed_count | 既存重複数 |
-| skipped_no_party | 政党未設定スキップ数 |
-| skipped_no_group | 会派なしスキップ数 |
-| skipped_multiple_groups | 複数会派スキップ数 |
+    | 項目 | 説明 |
+    |------|------|
+    | total_elected | 当選者総数 |
+    | linked_count | 新規紐付け数 |
+    | already_existed_count | 既存重複数 |
+    | skipped_no_party | 政党未設定スキップ数 |
+    | skipped_no_group | 会派なしスキップ数 |
+    | skipped_multiple_groups | 複数会派スキップ数 |
 
 ## SEED生成
 
-データベースの会派メンバーシップをSEEDファイルとして出力できます。
+データベースの会派メンバーシップをSEEDファイルとして出力できます。出力先: `database/seed_parliamentary_group_memberships_generated.sql`
 
-```bash
-# 一括実行＋SEED生成
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/link_parliamentary_groups_bulk.py --skip-seed false
-```
+??? example "SEED生成の詳細"
 
-### 出力ファイル
+    ```bash
+    # 一括実行＋SEED生成
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/link_parliamentary_groups_bulk.py --skip-seed false
+    ```
 
-`database/seed_parliamentary_group_memberships_generated.sql`
+    生成されるSQL形式:
 
-### 生成されるSQL形式
+    ```sql
+    -- 第45回 (2009-08-30)
+    INSERT INTO parliamentary_group_memberships (politician_id, parliamentary_group_id, start_date, end_date, role)
+    SELECT (SELECT id FROM politicians WHERE name = '山田 太郎'),
+           (SELECT id FROM parliamentary_groups WHERE name = '自由民主党'
+            AND governing_body_id = (SELECT id FROM governing_bodies WHERE name = '国会' AND type = '国')),
+           '2009-08-30', NULL, NULL
+    WHERE NOT EXISTS (SELECT 1 FROM parliamentary_group_memberships
+                      WHERE politician_id = (SELECT id FROM politicians WHERE name = '山田 太郎')
+                      AND parliamentary_group_id = (SELECT id FROM parliamentary_groups WHERE name = '自由民主党' ...)
+                      AND start_date = '2009-08-30');
+    ```
 
-```sql
--- 第45回 (2009-08-30)
-INSERT INTO parliamentary_group_memberships (politician_id, parliamentary_group_id, start_date, end_date, role)
-SELECT (SELECT id FROM politicians WHERE name = '山田 太郎'),
-       (SELECT id FROM parliamentary_groups WHERE name = '自由民主党'
-        AND governing_body_id = (SELECT id FROM governing_bodies WHERE name = '国会' AND type = '国')),
-       '2009-08-30', NULL, NULL
-WHERE NOT EXISTS (SELECT 1 FROM parliamentary_group_memberships
-                  WHERE politician_id = (SELECT id FROM politicians WHERE name = '山田 太郎')
-                  AND parliamentary_group_id = (SELECT id FROM parliamentary_groups WHERE name = '自由民主党' ...)
-                  AND start_date = '2009-08-30');
-```
-
-!!! note "冪等性"
     `WHERE NOT EXISTS` を使用しているため、複数回実行しても重複レコードは作成されません。
 
 ## パイプライン品質検証
 
 `verify_parliamentary_group_pipeline.py` で会派紐付けパイプラインの品質を検証できます。
 
-```bash
-# ベースライン測定のみ
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/verify_parliamentary_group_pipeline.py --mode baseline
+??? example "コマンド例と検証基準"
 
-# 検証のみ（要: 保存済みベースライン）
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/verify_parliamentary_group_pipeline.py --mode verify
+    ```bash
+    # ベースライン測定のみ
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/verify_parliamentary_group_pipeline.py --mode baseline
 
-# 測定→実行→検証の一括実行
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/verify_parliamentary_group_pipeline.py --mode full
+    # 検証のみ（要: 保存済みベースライン）
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/verify_parliamentary_group_pipeline.py --mode verify
 
-# 院を指定
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/verify_parliamentary_group_pipeline.py --mode full --chamber 衆議院
-```
+    # 測定→実行→検証の一括実行
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/verify_parliamentary_group_pipeline.py --mode full
 
-### コマンドライン引数
+    # 院を指定
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/verify_parliamentary_group_pipeline.py --mode full --chamber 衆議院
+    ```
 
-| 引数 | 説明 | デフォルト |
-|------|------|-----------|
-| `--mode` | baseline/verify/full | - |
-| `--chamber` | 衆議院/参議院/all | all |
-| `--dry-run` | DB書き込みなし（mode=fullのみ） | - |
+    | 引数 | 説明 | デフォルト |
+    |------|------|-----------|
+    | `--mode` | baseline/verify/full | - |
+    | `--chamber` | 衆議院/参議院/all | all |
+    | `--dry-run` | DB書き込みなし（mode=fullのみ） | - |
 
-### 成功基準
+    **成功基準:**
 
-| 基準 | 条件 |
-|------|------|
-| 衆議院カバー率 | 全選挙に少なくとも1件のメンバーシップが存在 |
-| 参議院カバー率 | 全選挙に少なくとも1件のメンバーシップが存在 |
-| スキップ率 | 政党未設定を除くスキップが10%以下 |
+    | 基準 | 条件 |
+    |------|------|
+    | 衆議院カバー率 | 全選挙に少なくとも1件のメンバーシップが存在 |
+    | 参議院カバー率 | 全選挙に少なくとも1件のメンバーシップが存在 |
+    | スキップ率 | 政党未設定を除くスキップが10%以下 |
 
-出力ファイル:
+    出力ファイル:
 
-- `tmp/pipeline_baseline.json` — ベースライン計測値
-- `tmp/pipeline_verification_results.json` — 詳細検証結果
+    - `tmp/pipeline_baseline.json` — ベースライン計測値
+    - `tmp/pipeline_verification_results.json` — 詳細検証結果

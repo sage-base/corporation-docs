@@ -115,116 +115,115 @@ erDiagram
 
 総務省が公開している衆議院選挙の小選挙区候補者データをインポートします。
 
-```bash
-# 特定の選挙回次をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_election.py --election 50
+??? example "コマンド例と引数"
 
-# 全選挙（第45回〜第50回）をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_election.py --all
+    ```bash
+    # 特定の選挙回次をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_election.py --election 50
 
-# ドライラン（DB書き込みなし）
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_election.py --election 50 --dry-run
-```
+    # 全選挙（第45回〜第50回）をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_election.py --all
 
-#### コマンドライン引数
+    # ドライラン（DB書き込みなし）
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_election.py --election 50 --dry-run
+    ```
 
-| 引数 | 説明 |
-|------|------|
-| `--election {45-50}` | 特定の選挙回次を指定 |
-| `--all` | 全選挙を一括インポート（第45回〜第50回） |
-| `--dry-run` | ドライラン（データベース書き込みなし） |
+    | 引数 | 説明 |
+    |------|------|
+    | `--election {45-50}` | 特定の選挙回次を指定 |
+    | `--all` | 全選挙を一括インポート（第45回〜第50回） |
+    | `--dry-run` | ドライラン（データベース書き込みなし） |
 
-#### インポートされるデータ（小選挙区）
+??? note "インポートされるデータ（小選挙区）"
 
-| フィールド | 説明 | 例 |
-|------------|------|-----|
-| name | 候補者氏名 | 山田太郎 |
-| party_name | 政党名 | 自由民主党 |
-| district_name | 選挙区名 | 北海道第１区 |
-| prefecture | 都道府県名 | 北海道 |
-| total_votes | 総得票数 | 98765 |
-| rank | 得票順位 | 1 |
-| is_elected | 当選フラグ | true |
+    | フィールド | 説明 | 例 |
+    |------------|------|-----|
+    | name | 候補者氏名 | 山田太郎 |
+    | party_name | 政党名 | 自由民主党 |
+    | district_name | 選挙区名 | 北海道第１区 |
+    | prefecture | 都道府県名 | 北海道 |
+    | total_votes | 総得票数 | 98765 |
+    | rank | 得票順位 | 1 |
+    | is_elected | 当選フラグ | true |
 
 ### 比例代表データインポーター
 
 衆議院選挙の比例代表当選者データをインポートします。
 
-```bash
-# 特定の選挙回次をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_proportional.py --election 50
+??? example "コマンド例"
 
-# 全選挙（第45回〜第50回）をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_proportional.py --all
+    ```bash
+    # 特定の選挙回次をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_proportional.py --election 50
 
-# ドライラン
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_proportional.py --election 50 --dry-run
-```
+    # 全選挙（第45回〜第50回）をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_proportional.py --all
 
-#### データソース形式
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_proportional.py --election 50 --dry-run
+    ```
 
-| 選挙回次 | 形式 | 抽出方法 |
-|----------|------|----------|
-| 第48回（2017年） | XLS | 直接パース |
-| 第45〜47、49〜50回 | PDF | Gemini APIで構造化抽出 |
+??? note "データソース形式"
 
-!!! note "PDF抽出の前提条件"
+    | 選挙回次 | 形式 | 抽出方法 |
+    |----------|------|----------|
+    | 第48回（2017年） | XLS | 直接パース |
+    | 第45〜47、49〜50回 | PDF | Gemini APIで構造化抽出 |
+
     PDF形式のデータ抽出には `GOOGLE_API_KEY` 環境変数が必要です（Gemini APIアクセス用）。
 
-#### インポートされるデータ（比例代表）
+??? note "インポートされるデータ（比例代表）"
 
-| フィールド | 説明 | 例 |
-|------------|------|-----|
-| name | 候補者氏名 | 山田 太郎 |
-| party_name | 政党名 | 自由民主党 |
-| block_name | 比例ブロック名 | 北海道 |
-| list_order | 名簿順位 | 1 |
-| smd_result | 小選挙区結果 | 当/落/空白 |
-| loss_ratio | 惜敗率 | 92.714 |
-| is_elected | 当選フラグ | true |
+    | フィールド | 説明 | 例 |
+    |------------|------|-----|
+    | name | 候補者氏名 | 山田 太郎 |
+    | party_name | 政党名 | 自由民主党 |
+    | block_name | 比例ブロック名 | 北海道 |
+    | list_order | 名簿順位 | 1 |
+    | smd_result | 小選挙区結果 | 当/落/空白 |
+    | loss_ratio | 惜敗率 | 92.714 |
+    | is_elected | 当選フラグ | true |
 
-#### 比例ブロック（11ブロック）
+    **比例ブロック（11ブロック）**: 北海道、東北、北関東、南関東、東京、北陸信越、東海、近畿、中国、四国、九州
 
-北海道、東北、北関東、南関東、東京、北陸信越、東海、近畿、中国、四国、九州
+    **比例代表の結果分類**:
 
-#### 比例代表の結果分類
-
-| 結果 | 条件 |
-|------|------|
-| 比例当選 | 小選挙区の結果が「当」以外で比例名簿から当選 |
-| 比例復活 | 小選挙区で落選後、惜敗率をもとに比例で復活当選 |
+    | 結果 | 条件 |
+    |------|------|
+    | 比例当選 | 小選挙区の結果が「当」以外で比例名簿から当選 |
+    | 比例復活 | 小選挙区で落選後、惜敗率をもとに比例で復活当選 |
 
 ## Wikipedia衆議院選挙データインポーター
 
 第1回（1890年）〜第44回（2005年）の歴史的な衆議院選挙データをWikipediaからインポートします。
 
-```bash
-# 特定の選挙回次をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_wikipedia_election.py --election 40
+??? example "コマンド例と引数"
 
-# 全選挙（第1回〜第44回）をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_wikipedia_election.py --all
+    ```bash
+    # 特定の選挙回次をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_wikipedia_election.py --election 40
 
-# ドライラン
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_wikipedia_election.py --election 40 --dry-run
-```
+    # 全選挙（第1回〜第44回）をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_wikipedia_election.py --all
 
-### コマンドライン引数
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_wikipedia_election.py --election 40 --dry-run
+    ```
 
-| 引数 | 説明 |
-|------|------|
-| `--election {1-44}` | 特定の選挙回次を指定 |
-| `--all` | 全選挙を一括インポート（第1回〜第44回） |
-| `--dry-run` | ドライラン（データベース書き込みなし） |
+    | 引数 | 説明 |
+    |------|------|
+    | `--election {1-44}` | 特定の選挙回次を指定 |
+    | `--all` | 全選挙を一括インポート（第1回〜第44回） |
+    | `--dry-run` | ドライラン（データベース書き込みなし） |
 
 ### 選挙制度の変遷
 
@@ -243,113 +242,112 @@ Wikipedia APIからInfoboxテンプレートを取得し、当選者情報をパ
 
 ### 参議院選挙区データインポーター
 
-```bash
-# 特定の選挙回次をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_sangiin_election.py --election 25
+??? example "コマンド例と引数"
 
-# 全選挙（第21回〜第27回）をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_sangiin_election.py --all
+    ```bash
+    # 特定の選挙回次をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_sangiin_election.py --election 25
 
-# ドライラン
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_sangiin_election.py --election 25 --dry-run
-```
+    # 全選挙（第21回〜第27回）をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_sangiin_election.py --all
 
-#### コマンドライン引数
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_sangiin_election.py --election 25 --dry-run
+    ```
 
-| 引数 | 説明 |
-|------|------|
-| `--election {21-27}` | 特定の選挙回次を指定 |
-| `--all` | 全選挙を一括インポート（第21回〜第27回） |
-| `--dry-run` | ドライラン（データベース書き込みなし） |
+    | 引数 | 説明 |
+    |------|------|
+    | `--election {21-27}` | 特定の選挙回次を指定 |
+    | `--all` | 全選挙を一括インポート（第21回〜第27回） |
+    | `--dry-run` | ドライラン（データベース書き込みなし） |
 
 ### 参議院比例代表データインポーター
 
-```bash
-# 特定の選挙回次をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_sangiin_proportional.py --election 25
+??? example "コマンド例"
 
-# 全選挙（第21回〜第27回）をインポート
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_sangiin_proportional.py --all
+    ```bash
+    # 特定の選挙回次をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_sangiin_proportional.py --election 25
 
-# ドライラン
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_soumu_sangiin_proportional.py --election 25 --dry-run
-```
+    # 全選挙（第21回〜第27回）をインポート
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_sangiin_proportional.py --all
+
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_soumu_sangiin_proportional.py --election 25 --dry-run
+    ```
 
 ## SmartNews SMRI 参議院議員データインポーター
 
 SmartNews SMRI（スマートニュースメディア研究所）が公開している参議院議員データ（`giin.json`）をインポートします。
 
-```bash
-# インポート実行
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_sangiin_election.py data/giin.json
+??? example "コマンド例と引数"
 
-# ドライラン
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/import_sangiin_election.py data/giin.json --dry-run
-```
+    ```bash
+    # インポート実行
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_sangiin_election.py data/giin.json
 
-### コマンドライン引数
+    # ドライラン
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/import_sangiin_election.py data/giin.json --dry-run
+    ```
 
-| 引数 | 説明 |
-|------|------|
-| `file_path`（位置引数） | `giin.json` ファイルのパス |
-| `--dry-run` | ドライラン（データベース書き込みなし） |
+    | 引数 | 説明 |
+    |------|------|
+    | `file_path`（位置引数） | `giin.json` ファイルのパス |
+    | `--dry-run` | ドライラン（データベース書き込みなし） |
 
 ### データソース
 
 [SmartNews SMRI house-of-councillors](https://github.com/smartnews-smri/house-of-councillors) リポジトリの `giin.json`。
 
-## インポート処理フロー
+??? note "インポート処理フロー（全インポーター共通）"
 
-全インポーターに共通する処理フローです。
+    ```mermaid
+    flowchart TD
+        A[インポートスクリプト実行] --> B{データソース}
+        B -->|総務省XLS| C[XLSダウンロード・パース]
+        B -->|総務省PDF| D[Gemini APIで構造化抽出]
+        B -->|Wikipedia| E[Wikipedia APIでInfoboxパース]
+        B -->|SmartNews SMRI| F[JSONファイルパース]
+        C --> G[候補者データ抽出]
+        D --> G
+        E --> G
+        F --> G
+        G --> H{政治家マッチング}
+        H -->|既存の政治家にマッチ| I[既存レコードを使用]
+        H -->|新規| J[Politicianレコード自動作成]
+        H -->|同姓同名で判別不可| K[スキップ]
+        I --> L[ElectionMemberレコード作成]
+        J --> L
+        L --> M{政党が存在するか?}
+        M -->|既存| N[既存PoliticalPartyを使用]
+        M -->|新規| O[PoliticalPartyレコード自動作成]
+        N --> P[結果レポート出力]
+        O --> P
+    ```
 
-```mermaid
-flowchart TD
-    A[インポートスクリプト実行] --> B{データソース}
-    B -->|総務省XLS| C[XLSダウンロード・パース]
-    B -->|総務省PDF| D[Gemini APIで構造化抽出]
-    B -->|Wikipedia| E[Wikipedia APIでInfoboxパース]
-    B -->|SmartNews SMRI| F[JSONファイルパース]
-    C --> G[候補者データ抽出]
-    D --> G
-    E --> G
-    F --> G
-    G --> H{政治家マッチング}
-    H -->|既存の政治家にマッチ| I[既存レコードを使用]
-    H -->|新規| J[Politicianレコード自動作成]
-    H -->|同姓同名で判別不可| K[スキップ]
-    I --> L[ElectionMemberレコード作成]
-    J --> L
-    L --> M{政党が存在するか?}
-    M -->|既存| N[既存PoliticalPartyを使用]
-    M -->|新規| O[PoliticalPartyレコード自動作成]
-    N --> P[結果レポート出力]
-    O --> P
-```
-
-!!! info "冪等性"
     全インポーターは冪等に設計されています。同じ選挙に対して再実行すると、既存のElectionMemberを削除してから再作成します。
 
-## 出力統計
+??? info "出力統計"
 
-インポート完了後、以下の統計情報が出力されます：
+    インポート完了後、以下の統計情報が出力されます：
 
-| 項目 | 説明 |
-|------|------|
-| total_candidates | 総候補者数 |
-| matched_politicians | 既存政治家とマッチした数 |
-| created_politicians | 新規作成した政治家数 |
-| created_parties | 新規作成した政党数 |
-| skipped_ambiguous | 同姓同名でスキップした数 |
-| skipped_duplicate | 重複でスキップした数 |
-| election_members_created | 作成したElectionMember数 |
+    | 項目 | 説明 |
+    |------|------|
+    | total_candidates | 総候補者数 |
+    | matched_politicians | 既存政治家とマッチした数 |
+    | created_politicians | 新規作成した政治家数 |
+    | created_parties | 新規作成した政党数 |
+    | skipped_ambiguous | 同姓同名でスキップした数 |
+    | skipped_duplicate | 重複でスキップした数 |
+    | election_members_created | 作成したElectionMember数 |
 
 !!! tip "会派メンバーシップ自動紐付け"
     選挙結果をインポートした後、当選者を会派に自動紐付けできます。詳細は[会派メンバーシップ](relations/parliamentary-group-membership.md)を参照してください。

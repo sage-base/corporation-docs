@@ -44,25 +44,25 @@ SEEDファイル: `database/seed_parliamentary_group_parties_generated.sql`
 
 `investigate_kaiha_mapping.py` で、SmartNews SMRIデータから会派名を抽出し、政党との対応関係を調査できます。
 
-```bash
-docker compose -f docker/docker-compose.yml exec sagebase \
-    uv run python scripts/investigate_kaiha_mapping.py
-```
+??? example "コマンド例と出力ファイル"
 
-### 出力ファイル
+    ```bash
+    docker compose -f docker/docker-compose.yml exec sagebase \
+        uv run python scripts/investigate_kaiha_mapping.py
+    ```
 
-| ファイル | 内容 |
-|---------|------|
-| `tmp/kaiha_shuugiin_by_session.csv` | 衆議院の会派名一覧（会期別） |
-| `tmp/kaiha_sangiin_current.csv` | 参議院の現在の会派名一覧 |
-| `tmp/kaiha_mapping_proposal.json` | マッピング提案（信頼度付き） |
-| `tmp/kaiha_unmapped_groups.csv` | 未マッピングの会派一覧 |
+    | ファイル | 内容 |
+    |---------|------|
+    | `tmp/kaiha_shuugiin_by_session.csv` | 衆議院の会派名一覧（会期別） |
+    | `tmp/kaiha_sangiin_current.csv` | 参議院の現在の会派名一覧 |
+    | `tmp/kaiha_mapping_proposal.json` | マッピング提案（信頼度付き） |
+    | `tmp/kaiha_unmapped_groups.csv` | 未マッピングの会派一覧 |
 
-### マッピングの信頼度
+    **マッピングの信頼度:**
 
-| 信頼度 | 意味 |
-|--------|------|
-| `existing` | 既存の対応関係あり |
-| `high` | 名前から高確度でマッチ |
-| `medium` | 部分一致 |
-| `unmapped` | 対応する政党が不明 |
+    | 信頼度 | 意味 |
+    |--------|------|
+    | `existing` | 既存の対応関係あり |
+    | `high` | 名前から高確度でマッチ |
+    | `medium` | 部分一致 |
+    | `unmapped` | 対応する政党が不明 |
