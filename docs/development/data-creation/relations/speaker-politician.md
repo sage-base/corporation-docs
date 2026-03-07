@@ -19,11 +19,14 @@ erDiagram
         string name_yomi
         float matching_confidence
         string matching_reason
+        string skip_reason
     }
 
     Politician-政治家 {
         int id
         string name
+        string furigana
+        string kanji_name
         string prefecture
         int political_party_id
     }
@@ -125,13 +128,13 @@ flowchart TD
         --date-to 2007-12-31 \
         --wide-match
 
-    # 信頼度閾値を変更
+    # BAMLフォールバック有効（完全一致しないケースにLLM判定を使用）
     docker compose -f docker/docker-compose.yml exec sagebase \
         sagebase kokkai bulk-match-speakers \
-        --chamber 参議院 \
+        --chamber 衆議院 \
         --date-from 2020-01-01 \
         --date-to 2024-12-31 \
-        --confidence-threshold 0.7
+        --enable-baml-fallback
 
     # ドライラン
     docker compose -f docker/docker-compose.yml exec sagebase \
@@ -149,6 +152,7 @@ flowchart TD
     | `--date-to` | はい | 終了日（YYYY-MM-DD） | - |
     | `--confidence-threshold` | いいえ | マッチング信頼度閾値 | 0.8 |
     | `--wide-match` | いいえ | 広域マッチングモード（ElectionMemberベース） | 通常モード |
+    | `--enable-baml-fallback` | いいえ | ルールベース未マッチ時にBAML（LLM）判定を有効化 | 無効 |
     | `--dry-run` | いいえ | 対象会議一覧のみ表示 | - |
 
 ### マッチングモード
@@ -156,30 +160,81 @@ flowchart TD
 | モード | 候補リスト構築方法 | 対象期間 |
 |--------|------------------|---------|
 | **通常モード**（デフォルト） | ConferenceMemberから取得 | ConferenceMemberデータがある期間 |
-| **広域マッチング**（`--wide-match`） | ElectionMember（選挙当選者）から取得 | 全期間（特に1947-2007年） |
+| **広域マッチング**（`--wide-match`） | ElectionMember（選挙当選者）から取得。候補なしの場合は全Politicianにフォールバック | 全期間（特に1947-2007年） |
 
 広域マッチングでは、参議院の半数改選に対応するため直近2回の選挙当選者を合算して候補リストを構築します。
 
-### マッチング戦略
+### マッチング処理フロー（広域マッチング）
 
-マッチングは以下の順序で行われます：
+広域マッチングは1会議ごとに以下の3段階方式で処理されます:
 
-1. **名前正規化**: NFKC正規化、旧字体→新字体変換（約70文字: 櫻→桜、齋→斎 等）を適用
-2. **ルールベースマッチ**: 正規化後の名前で類似度計算。完全一致、漢字姓一致（ひらがな混じり名対応）など複数ステップ
-3. **同姓同名判定**: 候補に同姓が複数存在する場合、`skip_reason=HOMONYM` として記録しスキップ
-4. **BAMLフォールバック（LLM）**: ルールベースで確定できない場合、Gemini 2 Flashで候補を評価
+```mermaid
+flowchart TD
+    A[Meeting取得] --> B[Minutes → Conversations → Speaker一覧]
+    B --> C{既にpolitician_id<br/>が紐付いている?}
+    C -->|はい| SKIP[スキップ]
+    C -->|いいえ| D[候補リスト構築]
+    D --> E["Step 1: 完全一致マッチング<br/>（正規化後の名前完全一致）"]
+    E --> F{マッチした?}
+    F -->|はい| G[信頼度に基づきDB書き込み]
+    F -->|いいえ| H["Step 1b: kanji_name完全一致フォールバック"]
+    H --> I{マッチした?}
+    I -->|はい| G
+    I -->|いいえ| J[非政治家分類チェック]
+    J --> K{委員長/参考人<br/>等のパターン?}
+    K -->|はい| L["is_politician=false + skip_reason設定"]
+    K -->|いいえ| M["Step 2a: 候補フィルタリング<br/>（LLM用の候補絞り込み）"]
+    M --> N{BAMLフォールバック<br/>が有効?}
+    N -->|はい| O["Step 2b: LLM判定<br/>（BAML: Gemini 2 Flash）"]
+    N -->|いいえ| P[未マッチとして記録]
+    O --> G
+```
 
-??? note "信頼度スコアリング"
+### 名前正規化
 
-    マッチ結果には信頼度が付与され、Speakerの `matching_confidence` / `matching_reason` に記録されます。
+ルールベースマッチングの前に、発言者名と候補政治家名の両方に正規化を適用します（`NameNormalizer`）:
 
-    | 信頼度 | 条件 | 処理 |
-    |--------|------|------|
-    | 0.9+ | 氏名完全一致 + 政党一致 | 自動マッチ |
-    | 0.85 | 漢字姓一致（ひらがな混じり名対応） | 自動マッチ |
-    | 0.7-0.9 | 氏名一致、政党不明/部分一致 | 手動検証待ち |
-    | 0.5-0.7 | 名前のバリエーションだが政党一致 | 保留 |
-    | 0.5未満 | マッチなし | スキップ |
+1. **NFKC正規化**: 全角英数→半角、異体字統合
+2. **旧字体→新字体変換**: 約120文字の変換テーブル（`齋→斎`、`澤→沢`、`櫻→桜`、`稻→稲`、`淺→浅` 等）
+3. **スペース除去**: 全角・半角スペースを削除
+4. **敬称除去**: 末尾の「君」「議員」「委員長」「副議長」等を除去
+
+### ルールベースマッチ
+
+正規化後の名前で**完全一致判定のみ**を行います。中間的なルール（姓のみ一致、ふりがな一致等）はLLM判定に委譲する設計です。
+
+1. **`candidate.name` 完全一致**: 正規化後のSpeaker名とPolitician名を比較（confidence=1.0, method=`exact_name`）
+2. **`candidate.kanji_name` 完全一致フォールバック**: name不一致時に、Politicianの `kanji_name`（旧字体・異体字の別名）と比較（confidence=1.0, method=`exact_kanji_name`）
+
+??? note "`kanji_name` フォールバックについて"
+
+    Politicianテーブルの `kanji_name` カラムには、Wikidata等から取得した漢字表記の別名が格納されています。国会会議録APIの発言者名は旧字体や異体字を含むことがあり、正規化だけでは吸収できない表記差を `kanji_name` でカバーします。
+
+    例: Speaker名「齋藤隆夫」→ 正規化「斎藤隆夫」→ `candidate.name`「斎藤隆夫」と一致
+
+    例: Speaker名「岸田文雄」→ `candidate.name` 不一致 → `candidate.kanji_name` と比較
+
+### LLM候補フィルタリング（Step 2a）
+
+完全一致しなかったSpeakerに対して、LLM判定に渡す候補を事前にフィルタリングします（`filter_candidates_for_llm`）。以下のいずれかに該当する候補を残します:
+
+| フィルタ基準 | 内容 | 例 |
+|-------------|------|-----|
+| 名前パート部分一致 | Politician名のスペース分割パート（2文字以上）がSpeaker名に含まれる | 「田中」が「田中角栄」に含まれる |
+| 漢字姓一致 | 先頭の連続漢字部分（姓）が双方向で一致 | 「武村」が「武村のぶひで」と一致 |
+| ふりがなプレフィックス一致 | Speaker name_yomiとPolitician furiganaの先頭3文字以上が一致 | 「たなか」と「たなかかくえい」 |
+
+### 信頼度に基づく処理
+
+マッチ結果のconfidence値に基づいて、Speakerの更新方法を分岐します:
+
+| confidence | アクション | `matching_reason` |
+|-----------|-----------|-------------------|
+| >= 0.9（auto_match_threshold） | **自動マッチ**: `politician_id` を即座にDB書き込み | `exact_name: 自動マッチ` |
+| >= 0.8（review_threshold） | **手動検証待ち**: `politician_id` を書き込み、検証待ちフラグ付き | `exact_name: 手動検証待ち` |
+| < 0.8 | **保留**: 何もしない | - |
+
+現在のルールベースマッチでは完全一致（confidence=1.0）しか発生しないため、マッチしたものはすべて自動マッチになります。BAMLフォールバック有効時は中間的なconfidence値が返されることがあります。
 
 ## ④ 4ステップパイプライン（run_pass1_speaker_matching.py）
 
