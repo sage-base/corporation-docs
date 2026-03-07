@@ -13,20 +13,21 @@ erDiagram
         int id
         string name
         int politician_id
+        int government_official_id
         string political_party_name
         bool is_politician
         bool is_manually_verified
         string name_yomi
+        string skip_reason
         float matching_confidence
         string matching_reason
-        string skip_reason
     }
 
     Politician-政治家 {
         int id
         string name
-        string furigana
         string kanji_name
+        string furigana
         string prefecture
         int political_party_id
     }
@@ -164,9 +165,11 @@ flowchart TD
 
 広域マッチングでは、参議院の半数改選に対応するため直近2回の選挙当選者を合算して候補リストを構築します。
 
-### マッチング処理フロー（広域マッチング）
+### マッチング戦略（3段階方式）
 
-広域マッチングは1会議ごとに以下の3段階方式で処理されます:
+マッチングは **完全一致 → 候補フィルタ → LLM判定** の3段階で行われます。従来の中間ルール（ふりがな・漢字姓・姓のみマッチ）は廃止され、LLM判定に委譲されました。
+
+広域マッチングは1会議ごとに以下のフローで処理されます:
 
 ```mermaid
 flowchart TD
@@ -174,7 +177,7 @@ flowchart TD
     B --> C{既にpolitician_id<br/>が紐付いている?}
     C -->|はい| SKIP[スキップ]
     C -->|いいえ| D[候補リスト構築]
-    D --> E["Step 1: 完全一致マッチング<br/>（正規化後の名前完全一致）"]
+    D --> E["Step 1: 完全一致マッチング<br/>（正規化後の name 完全一致）"]
     E --> F{マッチした?}
     F -->|はい| G[信頼度に基づきDB書き込み]
     F -->|いいえ| H["Step 1b: kanji_name完全一致フォールバック"]
@@ -189,6 +192,24 @@ flowchart TD
     N -->|いいえ| P[未マッチとして記録]
     O --> G
 ```
+
+**Step 1: 完全一致マッチング**
+
+Speaker名を正規化（NFKC正規化、旧字体→新字体変換、スペース除去、敬称除去）した後、候補政治家の `name` および `kanji_name` と完全一致判定を行います。一致すれば `confidence=1.0, match_method=EXACT_NAME` で即確定します。
+
+**Step 2a: 候補フィルタリング（`filter_candidates_for_llm`）**
+
+完全一致しなかった場合、LLMに渡す前に候補を絞り込みます。以下の3基準のOR条件でフィルタリングします：
+
+| 基準 | 内容 |
+|------|------|
+| 名前パート部分一致 | 候補名をスペース分割し、各パート（2文字以上）がSpeaker名に含まれるか |
+| 漢字姓一致（双方向） | 候補側/Speaker側の漢字姓（2文字以上）が相手の名前に含まれるか |
+| ふりがなプレフィックス一致 | 共通プレフィックス長3文字以上（姓部分の一致判定） |
+
+**Step 2b: BAML LLM判定**
+
+フィルタ済み候補をGemini 2 Flashに渡し、最終判定を行います。Speaker名の読み（`name_yomi`）もプロンプトに含め、ふりがな一致も考慮します。
 
 ### 名前正規化
 
@@ -212,29 +233,29 @@ flowchart TD
 
     例: Speaker名「齋藤隆夫」→ 正規化「斎藤隆夫」→ `candidate.name`「斎藤隆夫」と一致
 
-    例: Speaker名「岸田文雄」→ `candidate.name` 不一致 → `candidate.kanji_name` と比較
-
-### LLM候補フィルタリング（Step 2a）
-
-完全一致しなかったSpeakerに対して、LLM判定に渡す候補を事前にフィルタリングします（`filter_candidates_for_llm`）。以下のいずれかに該当する候補を残します:
-
-| フィルタ基準 | 内容 | 例 |
-|-------------|------|-----|
-| 名前パート部分一致 | Politician名のスペース分割パート（2文字以上）がSpeaker名に含まれる | 「田中」が「田中角栄」に含まれる |
-| 漢字姓一致 | 先頭の連続漢字部分（姓）が双方向で一致 | 「武村」が「武村のぶひで」と一致 |
-| ふりがなプレフィックス一致 | Speaker name_yomiとPolitician furiganaの先頭3文字以上が一致 | 「たなか」と「たなかかくえい」 |
-
 ### 信頼度に基づく処理
 
-マッチ結果のconfidence値に基づいて、Speakerの更新方法を分岐します:
+??? note "信頼度スコアリングと処理分岐"
 
-| confidence | アクション | `matching_reason` |
-|-----------|-----------|-------------------|
-| >= 0.9（auto_match_threshold） | **自動マッチ**: `politician_id` を即座にDB書き込み | `exact_name: 自動マッチ` |
-| >= 0.8（review_threshold） | **手動検証待ち**: `politician_id` を書き込み、検証待ちフラグ付き | `exact_name: 手動検証待ち` |
-| < 0.8 | **保留**: 何もしない | - |
+    **通常モード（MatchMeetingSpeakersUseCase）:**
 
-現在のルールベースマッチでは完全一致（confidence=1.0）しか発生しないため、マッチしたものはすべて自動マッチになります。BAMLフォールバック有効時は中間的なconfidence値が返されることがあります。
+    | 信頼度 | 処理 |
+    |--------|------|
+    | 1.0 | 完全一致で自動マッチ |
+    | >= 0.8（閾値） | BAML判定で自動マッチ |
+    | < 0.8 | マッチなし |
+
+    **広域マッチングモード（WideMatchSpeakersUseCase）:**
+
+    | 信頼度 | 処理 |
+    |--------|------|
+    | >= 0.9 | 自動マッチ |
+    | 0.8〜0.9 | 手動検証待ち |
+    | < 0.8 | マッチなし |
+
+    同姓候補が複数存在する場合は `skip_reason=HOMONYM` として記録しスキップします。
+
+    現在のルールベースマッチでは完全一致（confidence=1.0）しか発生しないため、マッチしたものはすべて自動マッチになります。BAMLフォールバック有効時は中間的なconfidence値が返されることがあります。
 
 ## ④ 4ステップパイプライン（run_pass1_speaker_matching.py）
 

@@ -42,11 +42,17 @@ tags:
 
 | フィールド | 必須 | 説明 |
 |------------|------|------|
-| 名前 | はい | 政治家の氏名 |
+| 名前 | はい | 政治家の氏名（Wikipediaインポート時はひらがな混じり名の場合あり） |
+| 漢字名（kanji_name） | いいえ | 漢字表記の正式名。ひらがな混じり名の場合に設定する（例: 名前「武村　のぶひで」→ 漢字名「武村展英」） |
 | 選挙区の都道府県 | はい | 47都道府県または「比例代表」から選択 |
 | 政党 | いいえ | 「無所属」または登録済みの政党から選択 |
 | 選挙区 | はい | 選挙区名（例: 東京1区） |
 | プロフィールURL | いいえ | 政治家のプロフィールページのURL |
+
+!!! info "ひらがな混じり名への対応"
+    Wikipediaの選挙データインポーターは、候補者がひらがな届出名で登録されている場合、そのまま `name` に保存します（全政治家の約71.8%が該当）。このため、国会会議録APIのSpeaker名（漢字）と完全一致しないケースが発生します。
+
+    `kanji_name` を設定することで、マッチングパイプラインが `name` と `kanji_name` の両方で完全一致判定を行い、マッチ率が向上します。Streamlit管理画面の「ひらがな名（漢字名未設定）のみ」フィルタで対象を絞って入力できます。
 
 ## 他オブジェクトとのリレーション
 
@@ -70,12 +76,15 @@ erDiagram
     Politician-政治家 {
         int id
         string name
+        string kanji_name
         string prefecture
         string district
         int political_party_id
         string furigana
         string profile_page_url
         string party_position
+        bool is_lastname_hiragana
+        bool is_firstname_hiragana
     }
 
     PoliticalParty-政党 {
